@@ -10,7 +10,8 @@ files = [
   '/app.py',
   '/requirements.txt',
   '/.posit/publish/cuidamos75-app-FVNI.toml',
-  '/.posit/publish/deployments/deployment-HQ3Q.toml'
+  '/.posit/publish/deployments/deployment-HQ3Q.toml',
+  '/products/geo/municipios.parquet'
 ]
 title = 'cuidamos75-app'
 
