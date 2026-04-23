@@ -6,7 +6,11 @@ from pathlib import Path
 from faicons import icon_svg
 
 from plotnine import (
-    theme_void, theme, element_text, element_rect)
+    theme_void, 
+    theme, 
+    element_text, 
+    element_rect
+)
 
 app_path = Path(__file__).parent
 AS_FILE = app_path / "products" / "geo" / "as.parquet"
