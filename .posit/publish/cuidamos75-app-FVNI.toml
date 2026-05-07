@@ -13,6 +13,9 @@ files = [
     "/.posit/publish/deployments/deployment-HQ3Q.toml",
     "/products/geo/municipios.parquet",
     "/data.py",
+    "/products/nanda_periodos.parquet",
+    "/products/poblacion.parquet",
+    "/products/geo/as.parquet",
 ]
 title = "cuidamos75-app"
 

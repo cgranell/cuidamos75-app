@@ -42,6 +42,16 @@ BASE_THEME_VOID = (
 )
 
 
+THEME_LEGEND_BOTTOM = (
+    theme(
+        legend_position="bottom",
+        legend_direction="vertical",
+        legend_title=element_text(size=8),
+        legend_text=element_text(size=7),
+        legend_key_size=8,
+    )
+)
+
 # Data preparation functions
 def geodata_municipios() -> gpd.GeoDataFrame:
     """

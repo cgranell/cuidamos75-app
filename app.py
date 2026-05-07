@@ -4,11 +4,15 @@ os.environ["POLARS_UNKNOWN_EXTENSION_TYPE_BEHAVIOR"] = "load_as_storage"
 #import geopandas as gpd
 #import pyarrow
 import polars as pl 
+from polars import selectors as cs
+import matplotlib.pyplot as plt
+import seaborn as sns
 
 # Load data and compute static values/constants that will be used in the app
 from data import (
     ICONS, 
     BASE_THEME_VOID,
+    THEME_LEGEND_BOTTOM,
     municipios,
     areas_salud,
     nanda_periodos,
@@ -16,8 +20,10 @@ from data import (
     )
 
 from plotnine import (
-    ggplot, geom_map, coord_fixed, aes, labs,
-    scale_fill_brewer)
+    ggplot, geom_map, geom_text, geom_tile, 
+    coord_fixed, aes, labs,
+    theme, element_text,
+    scale_fill_gradient, scale_fill_brewer)
 
 from shiny import reactive
 from shiny.express import input, ui, render
@@ -90,6 +96,7 @@ with ui.nav_panel("Contexto"):
     with ui.layout_columns(fillable=True):
         with ui.card(full_screen=True):
             ui.card_header("Municipios y áreas de salud")
+            
             @render.plot
             def plot_municipios_as():
 
@@ -122,40 +129,89 @@ with ui.nav_panel("Prevalencia dominios (Áreas de salud)"):
         with ui.card(full_screen=True):
             ui.card_header("Heatmap dominios por AS")
 
-        with ui.layout_column_wrap(col_widths=(1 / 2)):
-            with ui.card(full_screen=True):
-                ui.card_header("Mapa dominio prevalente")
+            @render.plot
+            def heatmap_as_dominio_prevalente():
 
-                @render.plot
-                def plot_as_dominio_prevalente():
+                df = (
+                    selected()
+                     .group_by(
+                        pl.col("AS_DESC"), 
+                        pl.col("DOMINIO"))
+                    .agg(pl.len().alias("DOMINIO_TOTAL"))
+                    .pivot(index="AS_DESC", on="DOMINIO", values="DOMINIO_TOTAL")
+                    .fill_null(0)
+                    .sort("AS_DESC", descending=False)
+                )
 
-                    # Prepara geodataframe
-                    selected_gdf = (
-                        areas_salud_data().merge(
-                            por_as_dominio_prevalente(), 
-                            on="AS_ID", 
-                            how="inner") 
-                            #left para mantener todas las AS, incluso las que no tienen casos registrados (que aparecerán con DOMINIO_PREVALENTE nulo)
-                    )   
-                    # Mapa coropleta por área de salud
-                    
-                    return (
-                        ggplot(selected_gdf)
-                        + geom_map(
-                            mapping=aes(fill="DOMINIO_PREVALENTE"),
-                            color="gray",
-                            size=0.3,
-                            show_legend=False #TODO: Si se muestra la leyenda, el mapa se vuelve ilegible por la cantidad de categorías de dominio prevalente (hasta 8 dominios diferentes)
-                        )
-                        + scale_fill_brewer(
-                            type="qual", palette=3)
-                        + labs(fill="Dominio Prevalente")
-                        + coord_fixed(ratio=1, expand=True)
-                        + BASE_THEME_VOID
+                 # log scale: ln(1+x)
+                heatmap_df = df.select(cs.numeric().log1p()) #if log_scale else df.select(cs.numeric())
+                #heatmap_df = heatmap_df[sorted(heatmap_df.columns)]  # sort columns alphabetically
+    
+                #fig, ax = plt.subplots(figsize=figsize)
+                fig, ax = plt.subplots()
+
+                ax = sns.heatmap(
+                    # sns.heatmap works best when the first column is not a row label
+                    heatmap_df,
+                    cmap="YlOrRd",
+                    linewidths=0,
+                    annot=df.drop("AS_DESC"),  
+                    fmt="g",
+                    ax=ax,
+                    #xticklabels=heatmap_df.columns,
+                    #cbar_kws={"label": "Casos totales (escala log)" if log_scale else "Casos totales"},
+                    cbar_kws={"label": "Casos totales (escala log)"},
+                    annot_kws={"size": 7}
+                )
+
+                plt.xticks(plt.xticks()[0], labels=heatmap_df.columns, rotation=45, ha="right", fontsize=8)
+                plt.yticks(plt.yticks()[0], labels=df["AS_DESC"], rotation=0, fontsize=8)
+                #ax.set_title(title, fontsize=12, fontweight="bold")
+                #plt.tight_layout()
+                return ax
+                #plt.show()
+
+
+        #with ui.layout_column_wrap(col_widths=(1 / 2)):
+        with ui.card(full_screen=True):
+            ui.card_header("Mapa dominio prevalente")
+
+            @render.plot
+            def plot_as_dominio_prevalente():
+
+                # Prepara geodataframe
+                selected_gdf = (
+                    areas_salud_data().merge(
+                        por_as_dominio_prevalente(), 
+                        on="AS_ID", 
+                        how="inner") 
+                        #left para mantener todas las AS, incluso las que no tienen casos registrados (que aparecerán con DOMINIO_PREVALENTE nulo)
+                )   
+                # Mapa coropleta por área de salud
+                
+                return (
+                    ggplot(selected_gdf)
+                    + geom_map(
+                        mapping=aes(fill="DOMINIO_PREVALENTE"),
+                        color="gray",
+                        size=0.3
                     )
+                    + geom_text(
+                        aes(
+                            x="CENTER_LON",
+                            y="CENTER_LAT",
+                            label="AS_DESC"),
+                        size=6)
+                    + scale_fill_brewer(
+                        type="qual", palette=3)
+                    + labs(fill="Dominio Prevalente")
+                    + coord_fixed(ratio=1, expand=True)
+                    + BASE_THEME_VOID
+                    + THEME_LEGEND_BOTTOM
+                )
 
-            with ui.card(full_screen=True):
-                ui.card_header("Tabla de clases por dominio prevalente")
+            #with ui.card(full_screen=True):
+            #    ui.card_header("Tabla de clases por dominio prevalente")
 
 
 with ui.nav_panel("Prevalencia dominios (Municipios)"):

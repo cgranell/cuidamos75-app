@@ -10,14 +10,17 @@ id = "019db04e-d31e-392e-9eda-d1818442ee13"
 dashboard_url = "https://connect.posit.cloud/cgranell/content/019db04e-d31e-392e-9eda-d1818442ee13"
 direct_url = "https://019db04e-d31e-392e-9eda-d1818442ee13.share.connect.posit.cloud"
 logs_url = "https://connect.posit.cloud/cgranell/content/019db04e-d31e-392e-9eda-d1818442ee13/history"
-deployed_at = "2026-05-07T10:30:42.305Z"
-bundle_id = "019e01fd-1568-c706-629f-17a778460a13"
+deployed_at = "2026-05-07T10:38:12.117Z"
+bundle_id = "019e0203-dbd2-1341-7f58-ab15c3a8e1b6"
 files = [
     ".posit/publish/cuidamos75-app-FVNI.toml",
     ".posit/publish/deployments/deployment-HQ3Q.toml",
     "app.py",
     "data.py",
+    "products/geo/as.parquet",
     "products/geo/municipios.parquet",
+    "products/nanda_periodos.parquet",
+    "products/poblacion.parquet",
     "requirements.txt",
 ]
 requirements = [
@@ -27,6 +30,7 @@ requirements = [
     "click==8.3.2",
     "contourpy==1.3.3",
     "cycler==0.12.1",
+    "faicons==0.2.2",
     "fonttools==4.62.1",
     "geopandas==1.1.3",
     "h11==0.16.0",
@@ -93,14 +97,12 @@ files = [
     "/.posit/publish/deployments/deployment-HQ3Q.toml",
     "/products/geo/municipios.parquet",
     "/data.py",
+    "/products/nanda_periodos.parquet",
+    "/products/poblacion.parquet",
+    "/products/geo/as.parquet",
 ]
 title = "cuidamos75-app"
 
 [configuration.python]
 version = "3.12"
-
-[deployment_error]
-code = "deployFailed"
-message = "Runtime error: Unable to start the app due to a runtime error. Please check the logs for more information."
-operation = "publish"
 
