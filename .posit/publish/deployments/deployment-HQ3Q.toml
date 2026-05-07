@@ -10,11 +10,12 @@ id = "019db04e-d31e-392e-9eda-d1818442ee13"
 dashboard_url = "https://connect.posit.cloud/cgranell/content/019db04e-d31e-392e-9eda-d1818442ee13"
 direct_url = "https://019db04e-d31e-392e-9eda-d1818442ee13.share.connect.posit.cloud"
 logs_url = "https://connect.posit.cloud/cgranell/content/019db04e-d31e-392e-9eda-d1818442ee13/history"
-deployed_at = "2026-05-07T10:38:12.117Z"
-bundle_id = "019e0203-dbd2-1341-7f58-ab15c3a8e1b6"
+deployed_at = "2026-05-07T11:16:10.497Z"
+bundle_id = "019e0226-4a29-d25c-b638-7f57261a165f"
 files = [
     ".posit/publish/cuidamos75-app-FVNI.toml",
     ".posit/publish/deployments/deployment-HQ3Q.toml",
+    ".python-version",
     "app.py",
     "data.py",
     "products/geo/as.parquet",
@@ -22,6 +23,7 @@ files = [
     "products/nanda_periodos.parquet",
     "products/poblacion.parquet",
     "requirements.txt",
+    "uv.lock",
 ]
 requirements = [
     "anyio==4.13.0",
@@ -65,6 +67,7 @@ requirements = [
     "python-multipart==0.0.26",
     "questionary==2.1.1",
     "scipy==1.17.1",
+    "seaborn==0.13.2",
     "setuptools==82.0.1",
     "shapely==2.1.2",
     "shiny==1.6.0",
@@ -100,6 +103,8 @@ files = [
     "/products/nanda_periodos.parquet",
     "/products/poblacion.parquet",
     "/products/geo/as.parquet",
+    "/uv.lock",
+    "/.python-version",
 ]
 title = "cuidamos75-app"
 

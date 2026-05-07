@@ -12,6 +12,8 @@ from plotnine import (
     element_rect
 )
 
+from plots import get_domain_colormap
+
 app_path = Path(__file__).parent
 AS_FILE = app_path / "products" / "geo" / "as.parquet"
 MUNICIPIOS_FILE = app_path / "products" / "geo" / "municipios.parquet"
@@ -90,6 +92,9 @@ def nanda_periodos_data() -> pl.DataFrame:
         .filter(
             pl.col("TIPO_DIAGNOSTICO") == "Disfuncionalidad"
         )
+        .with_columns( #TODO: revisar tipos de datos en fuente (parquet)
+            pl.col("PACIENTE_ID").cast(pl.String)
+        )
         .drop("TIPO_DIAGNOSTICO")
         .collect()
     )
@@ -106,6 +111,10 @@ def participantes_data() -> pl.DataFrame:
             pl.col("AS_ID"),
             pl.col("AS_DESC")
         )
+        .with_columns( #TODO: revisar tipos de datos en fuente (parquet)
+            pl.col("PACIENTE_ID").cast(pl.String),
+            pl.col("AS_ID").cast(pl.Int64)
+        )
         .collect()
     )
 
@@ -114,4 +123,9 @@ areas_salud = geodata_areas_salud()
 nanda_periodos = nanda_periodos_data()
 participantes = participantes_data()
 
+
+# Build once from your base data (not filtered) so colors are stable
+DOMINIO_COLORMAP = get_domain_colormap(nanda_periodos, domain_col="DOMINIO")
+
+COLOR_NA = "#cccccc"
         

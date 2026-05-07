@@ -16,6 +16,8 @@ files = [
     "/products/nanda_periodos.parquet",
     "/products/poblacion.parquet",
     "/products/geo/as.parquet",
+    "/uv.lock",
+    "/.python-version",
 ]
 title = "cuidamos75-app"
 
