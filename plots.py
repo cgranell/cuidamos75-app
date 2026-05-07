@@ -68,8 +68,8 @@ def plotly_heatmap_dominios(
     fig.update_layout(
         xaxis=dict(tickangle=45, tickfont_size=8, side="bottom"),
         yaxis=dict(tickfont_size=8, autorange="reversed"),  # top-to-bottom row order
-        coloraxis_colorbar=dict(title_side="right"),
-        margin=dict(l=120, r=40, t=40, b=120),
+        coloraxis_colorbar=dict(title_side="right")
+        #margin=dict(l=120, r=40, t=40, b=120),
     )
 
     return fig

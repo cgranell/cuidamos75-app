@@ -18,6 +18,7 @@ files = [
     "/products/geo/as.parquet",
     "/uv.lock",
     "/.python-version",
+    "/plots.py",
 ]
 title = "cuidamos75-app"
 
