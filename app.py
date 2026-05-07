@@ -11,7 +11,8 @@ from data import (
     BASE_THEME_VOID,
     municipios,
     areas_salud,
-    nanda_periodos
+    nanda_periodos,
+    participantes
     )
 
 from plotnine import (
@@ -29,9 +30,14 @@ ui.page_opts(title = "Cuidamos +75", fillable = True)
 
 
 with ui.sidebar():
+    ui.markdown(
+            """
+            Prototipo de visualización de datos de prevalencia de diagnósticos NANDA en personas mayores de 75 años, basado en datos del proyecto [Cuidamos+75](https://cuidamos75.com/).
+            """     
+        )
     ui.input_radio_buttons(  
         id = "param_ccaa",  
-        label = "Seleccionad CCAA:",  
+        label = "Selecciona CCAA:",  
         choices ={"14": "Murcia", "15": "Navarra"},
         #choices ={"14": "Murcia"},
         inline = False
@@ -52,8 +58,22 @@ with ui.nav_panel("Contexto"):
     with ui.layout_columns(col_widths=(6, 3, 3)):
     
         with ui.value_box(showcase=ICONS["participantes"]):
-            "Participantes (total / periodo)"
-            "25.000 / 100,000"
+            "Participantes (periodo - CCAA)"
+            @render.text
+            def total_participantes():                 
+                selected_periodo = input.param_periodo()
+
+                total_por_ccaa = participantes.height
+                total_por_periodo = (
+                    nanda_periodos
+                    .filter(
+                        pl.col("PERIODO_TIPO") == selected_periodo,
+                        pl.col("TIENE_PERIODO")
+                    )
+                    .select(pl.col("PACIENTE_ID").n_unique().alias("n"))
+                    .to_dicts()[0]["n"] # pull the value
+                )
+                return f"{total_por_periodo:,} - {total_por_ccaa:,}"
 
         with ui.value_box(showcase=ICONS["municipios"]):
             "Municipios"
@@ -106,6 +126,34 @@ with ui.nav_panel("Prevalencia dominios (Áreas de salud)"):
             with ui.card(full_screen=True):
                 ui.card_header("Mapa dominio prevalente")
 
+                @render.plot
+                def plot_as_dominio_prevalente():
+
+                    # Prepara geodataframe
+                    selected_gdf = (
+                        areas_salud_data().merge(
+                            por_as_dominio_prevalente(), 
+                            on="AS_ID", 
+                            how="inner") 
+                            #left para mantener todas las AS, incluso las que no tienen casos registrados (que aparecerán con DOMINIO_PREVALENTE nulo)
+                    )   
+                    # Mapa coropleta por área de salud
+                    
+                    return (
+                        ggplot(selected_gdf)
+                        + geom_map(
+                            mapping=aes(fill="DOMINIO_PREVALENTE"),
+                            color="gray",
+                            size=0.3,
+                            show_legend=False #TODO: Si se muestra la leyenda, el mapa se vuelve ilegible por la cantidad de categorías de dominio prevalente (hasta 8 dominios diferentes)
+                        )
+                        + scale_fill_brewer(
+                            type="qual", palette=3)
+                        + labs(fill="Dominio Prevalente")
+                        + coord_fixed(ratio=1, expand=True)
+                        + BASE_THEME_VOID
+                    )
+
             with ui.card(full_screen=True):
                 ui.card_header("Tabla de clases por dominio prevalente")
 
@@ -129,19 +177,8 @@ with ui.nav_panel("Prevalencia dominios (Municipios)"):
 with ui.nav_panel("Datos"):
     @render.data_frame
     def tabla_nanda():
-        return nanda_periodos_data()
-
-with ui.nav_panel("Notas"):
-    with ui.card(full_screen=True):
-        ui.card_header("Notas sobre la aplicación")
-        ui.markdown(
-            """
-            - Esta aplicación es un prototipo de visualización de datos de prevalencia de diagnósticos NANDA en personas mayores de 75 años, basado en datos reales pero con fines exclusivamente ilustrativos.
-            - Los datos han sido anonimizados y agregados para proteger la privacidad de los pacientes y cumplir con las normativas de protección de datos.
-            - La aplicación se ha desarrollado con fines educativos y de demostración, y no debe ser utilizada para tomar decisiones clínicas o administrativas.
-            """
-        )
-
+        #return nanda_periodos_data()
+        return selected()
 
 # Reactive data subsets based on user input
 
@@ -156,15 +193,114 @@ def areas_salud_data():
     selected_ccaa = input.param_ccaa()
     return areas_salud.loc[areas_salud["CCAA_CODINE"] == selected_ccaa]
 
+def participantes_data() -> str:
+    pass
+
+@reactive.calc
+def selected():
+    selected_ccaa = input.param_ccaa()
+    selected_periodo = input.param_periodo()
+
+    selected_nanda = (
+        nanda_periodos
+        .filter(
+            # TODO: Añadir CCAA_CODINE a nanda_periodos para poder filtrar por CCAA
+            #pl.col("CCAA_CODINE") == selected_ccaa,
+            pl.col("PERIODO_TIPO") == selected_periodo,
+            pl.col("TIENE_PERIODO"),
+        )
+        .with_columns(
+            pl.col("PACIENTE_ID").cast(pl.String)
+        )
+    )
+
+    selected_participantes = (
+        participantes
+        .filter(
+            pl.col("CCAA_CODINE") == selected_ccaa
+        )
+        .select(["PACIENTE_ID", "PACIENTE_CP", "AS_ID", "AS_DESC"])
+        .with_columns(
+            pl.col("PACIENTE_ID").cast(pl.String),
+            pl.col("AS_ID").cast(pl.Int64)
+        )
+    )
+
+    return (
+        selected_nanda.join(
+            selected_participantes,
+            on="PACIENTE_ID", 
+            how="left")
+    )
+
 
 @reactive.calc
 def nanda_periodos_data():
+    #selected_ccaa = input.param_ccaa()
     selected_periodo = input.param_periodo()
+
     return (
         nanda_periodos
         .filter(
+            #pl.col("CCAA_CODINE") == selected_ccaa,
             pl.col("PERIODO_TIPO") == selected_periodo,
             pl.col("TIENE_PERIODO"),
         )
         .sample(30)
     )
+
+@reactive.calc
+def por_as_dominio_prevalente(): 
+    #selected_ccaa = input.param_ccaa()
+    #selected_periodo = input.param_periodo()
+
+    return (
+        selected()
+        .group_by(
+            pl.col("AS_ID"), 
+            pl.col("DOMINIO"))
+        .agg(
+            pl.len().alias("DOMINIO_TOTAL"))
+        .sort(pl.col("DOMINIO_TOTAL"), descending=True)
+        .group_by(pl.col("AS_ID"))
+        .agg(pl.first("DOMINIO").alias("DOMINIO_PREVALENTE"))
+        .sort("AS_ID", descending=False)
+        .to_pandas()
+    )   
+
+def por_municipio_dominio_prevalente(): 
+    #selected_ccaa = input.param_ccaa()
+    selected_periodo = input.param_periodo()
+
+    return (
+        nanda_periodos
+        .filter(
+            #pl.col("CCAA_CODINE") == selected_ccaa,
+            pl.col("PERIODO_TIPO") == selected_periodo,
+            pl.col("TIENE_PERIODO")
+        )
+        .group_by(
+            pl.col("MUNI_CODINE"), 
+            pl.col("DOMINIO"))
+        .agg(
+            pl.len().alias("DOMINIO_TOTAL"))
+        .sort(pl.col("DOMINIO_TOTAL"), descending=True)
+        .group_by(pl.col("MUNI_CODINE"))
+        .agg(pl.first("DOMINIO").alias("DOMINIO_PREVALENTE"))
+        .sort("MUNI_CODINE", descending=False)
+    )   
+
+
+
+
+def por_as_dominio():
+    return (
+        selected()
+        .group_by(
+            pl.col("AS_DESC"), 
+            pl.col("DOMINIO"))
+        .agg(pl.len().alias("DOMINIO_TOTAL"))
+        .pivot(index="AS_DESC", on="DOMINIO", values="DOMINIO_TOTAL")
+        .fill_null(0)
+        .sort("AS_DESC", descending=False)
+)

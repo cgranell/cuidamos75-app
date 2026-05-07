@@ -16,6 +16,7 @@ app_path = Path(__file__).parent
 AS_FILE = app_path / "products" / "geo" / "as.parquet"
 MUNICIPIOS_FILE = app_path / "products" / "geo" / "municipios.parquet"
 NANDA_PERIODOS_FILE = app_path / "products" / "nanda_periodos.parquet"
+POBLACION_FILE = app_path / "products" / "poblacion.parquet"
 
 CRC_PROJECTED = "EPSG:3857" # Web Mercator
 CRC_SPHERICAL = "EPSG:4326" # WGS84: lat/lon values
@@ -83,8 +84,24 @@ def nanda_periodos_data() -> pl.DataFrame:
         .collect()
     )
 
+def participantes_data() -> pl.DataFrame:
+    return (
+        pl.scan_parquet(POBLACION_FILE)
+        .select(
+            pl.col("CCAA_CODINE"),
+            pl.col("PACIENTE_ID"),
+            pl.col("PACIENTE_CP"),
+            pl.col("MUNI_CODINE"),
+            pl.col("MUNI_DESC"),
+            pl.col("AS_ID"),
+            pl.col("AS_DESC")
+        )
+        .collect()
+    )
+
 municipios = geodata_municipios()
 areas_salud = geodata_areas_salud()
 nanda_periodos = nanda_periodos_data()
+participantes = participantes_data()
 
         
