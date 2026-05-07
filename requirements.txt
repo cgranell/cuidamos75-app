@@ -39,6 +39,7 @@ python-dateutil==2.9.0.post0
 python-multipart==0.0.26
 questionary==2.1.1
 scipy==1.17.1
+seaborn==0.13.2
 setuptools==82.0.1
 shapely==2.1.2
 shiny==1.6.0
