@@ -15,8 +15,8 @@ from plotnine import (
 from plots import get_domain_colormap
 
 app_path = Path(__file__).parent
-AS_FILE = app_path / "products" / "geo" / "as.parquet"
-MUNICIPIOS_FILE = app_path / "products" / "geo" / "municipios.parquet"
+AS_FILE = app_path / "products" / "as.parquet"
+MUNICIPIOS_FILE = app_path / "products" / "municipios.parquet"
 NANDA_PERIODOS_FILE = app_path / "products" / "nanda_periodos.parquet"
 POBLACION_FILE = app_path / "products" / "poblacion.parquet"
 
@@ -92,9 +92,9 @@ def nanda_periodos_data() -> pl.DataFrame:
         .filter(
             pl.col("TIPO_DIAGNOSTICO") == "Disfuncionalidad"
         )
-        .with_columns( #TODO: revisar tipos de datos en fuente (parquet)
-            pl.col("PACIENTE_ID").cast(pl.String)
-        )
+        #.with_columns( #TODO: revisar tipos de datos en fuente (parquet)
+        #    pl.col("PACIENTE_ID").cast(pl.String)
+        #)
         .drop("TIPO_DIAGNOSTICO")
         .collect()
     )
@@ -111,10 +111,10 @@ def participantes_data() -> pl.DataFrame:
             pl.col("AS_ID"),
             pl.col("AS_DESC")
         )
-        .with_columns( #TODO: revisar tipos de datos en fuente (parquet)
-            pl.col("PACIENTE_ID").cast(pl.String),
-            pl.col("AS_ID").cast(pl.Int64)
-        )
+        #.with_columns( #TODO: revisar tipos de datos en fuente (parquet)
+        #    pl.col("PACIENTE_ID").cast(pl.String),
+        #    pl.col("AS_ID").cast(pl.Int64)
+        #)
         .collect()
     )
 

@@ -298,8 +298,7 @@ def selected():
     selected_nanda = (
         nanda_periodos
         .filter(
-            # TODO: Añadir CCAA_CODINE a nanda_periodos para poder filtrar por CCAA
-            #pl.col("CCAA_CODINE") == selected_ccaa,
+            pl.col("CCAA_CODINE") == selected_ccaa,
             pl.col("PERIODO_TIPO") == selected_periodo,
             pl.col("TIENE_PERIODO"),
         )
@@ -322,13 +321,13 @@ def selected():
 
 @reactive.calc
 def nanda_periodos_data():
-    #selected_ccaa = input.param_ccaa()
+    selected_ccaa = input.param_ccaa()
     selected_periodo = input.param_periodo()
 
     return (
         nanda_periodos
         .filter(
-            #pl.col("CCAA_CODINE") == selected_ccaa,
+            pl.col("CCAA_CODINE") == selected_ccaa,
             pl.col("PERIODO_TIPO") == selected_periodo,
             pl.col("TIENE_PERIODO"),
         )
