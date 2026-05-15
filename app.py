@@ -101,12 +101,7 @@ with ui.nav_panel("Contexto"):
 
                 return (
                     ggplot()
-                    + geom_map(
-                        data=municipios_data(),
-                        color="#cccccc",
-                        fill="white",
-                        size=0.5
-                    )
+                    
                     + geom_map(
                         data=areas_salud_data(),
                         mapping=aes(fill="AS_DESC"),
@@ -114,6 +109,12 @@ with ui.nav_panel("Contexto"):
                         alpha=0.3,
                         size=0.2,
                         show_legend=True
+                    )
+                    + geom_map(
+                        data=municipios_data(),
+                        color="#cccccc",
+                        fill=None,
+                        size=0.2
                     )
                     #+ scale_fill_brewer(
                     #    type="qual", palette="Paired", na_value=COLOR_NA)
