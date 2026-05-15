@@ -2,7 +2,7 @@
 "$schema" = "https://cdn.posit.co/publisher/schemas/posit-publishing-record-schema-v3.json"
 server_type = "connect_cloud"
 server_url = "https://connect.posit.cloud"
-client_version = "2.0.0"
+client_version = "2.4.0"
 created_at = "2026-04-21T13:46:36.724Z"
 type = "python-shiny"
 configuration_name = "cuidamos75-app-FVNI"
@@ -10,8 +10,8 @@ id = "019db04e-d31e-392e-9eda-d1818442ee13"
 dashboard_url = "https://connect.posit.cloud/cgranell/content/019db04e-d31e-392e-9eda-d1818442ee13"
 direct_url = "https://019db04e-d31e-392e-9eda-d1818442ee13.share.connect.posit.cloud"
 logs_url = "https://connect.posit.cloud/cgranell/content/019db04e-d31e-392e-9eda-d1818442ee13/history"
-deployed_at = "2026-05-07T17:07:15.873Z"
-bundle_id = "019e0368-0774-adc7-8e05-fe7bb3df7e03"
+deployed_at = "2026-05-15T10:21:14.420Z"
+bundle_id = "019e2b27-4103-07d5-e13a-c8d807143d91"
 files = [
     ".posit/publish/cuidamos75-app-FVNI.toml",
     ".posit/publish/deployments/deployment-HQ3Q.toml",

@@ -53,6 +53,7 @@ pure-eval==0.2.3
 pyarrow==24.0.0
 pygments==2.20.0
 pyogrio==0.12.1
+pypalettes==0.2.1
 pyparsing==3.3.2
 pyproj==3.7.2
 python-dateutil==2.9.0.post0

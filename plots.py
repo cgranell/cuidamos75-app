@@ -1,11 +1,15 @@
 import polars as pl 
 from polars import selectors as cs
 import plotly.express as px
-  
+
+from pypalettes import load_palette
 
 # https://plotly.com/python/discrete-color/
 COLOR_PALETTE = px.colors.qualitative.Dark24
 
+# https://pypi.org/project/pypalettes/
+# Python Color Palette Finder: https://python-graph-gallery.com/color-palette-finder/
+CONTEXT_PALETTE = load_palette("Autumn")
 
 def get_domain_colormap(df: pl.DataFrame, domain_col: str = "DOMINIO") -> dict:
     """

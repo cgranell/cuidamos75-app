@@ -5,14 +5,14 @@ os.environ["POLARS_UNKNOWN_EXTENSION_TYPE_BEHAVIOR"] = "load_as_storage"
 #import pyarrow
 import polars as pl 
 
-from plots import plotly_heatmap_dominios 
+from plots import plotly_heatmap_dominios, CONTEXT_PALETTE
 
 # Load data and compute static values/constants that will be used in the app
 from data import (
     ICONS, 
     BASE_THEME_VOID,
     THEME_LEGEND_BOTTOM,
-    MASTER_COLORMAP_DOMINIO, COLOR_NA,
+    MASTER_COLORMAP_DOMINIO, COLOR_NA, 
     municipios,
     areas_salud,
     nanda_periodos,
@@ -22,7 +22,7 @@ from data import (
 from plotnine import (
     ggplot, geom_map, geom_text, 
     coord_fixed, aes, labs,
-    scale_fill_brewer, scale_fill_manual)
+    scale_fill_manual)#, scale_fill_brewer)
 
 from shiny import reactive
 from shiny.express import input, ui, render
@@ -115,8 +115,9 @@ with ui.nav_panel("Contexto"):
                         size=0.2,
                         show_legend=True
                     )
-                    + scale_fill_brewer(
-                        type="qual", palette=3)
+                    #+ scale_fill_brewer(
+                    #    type="qual", palette="Paired", na_value=COLOR_NA)
+                    + scale_fill_manual(CONTEXT_PALETTE, na_value=COLOR_NA)
                     + labs(fill="Áreas de salud")
                     + coord_fixed(ratio=1, expand=True)
                     + BASE_THEME_VOID
