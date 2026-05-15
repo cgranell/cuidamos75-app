@@ -12,7 +12,7 @@ from data import (
     ICONS, 
     BASE_THEME_VOID,
     THEME_LEGEND_BOTTOM,
-    #DOMINIO_COLORMAP,  #TODO: revisar palette global
+    MASTER_COLORMAP_DOMINIO, COLOR_NA,
     municipios,
     areas_salud,
     nanda_periodos,
@@ -22,7 +22,7 @@ from data import (
 from plotnine import (
     ggplot, geom_map, geom_text, 
     coord_fixed, aes, labs,
-    scale_fill_brewer)#, scale_fill_manual)
+    scale_fill_brewer, scale_fill_manual)
 
 from shiny import reactive
 from shiny.express import input, ui, render
@@ -117,7 +117,6 @@ with ui.nav_panel("Contexto"):
                     )
                     + scale_fill_brewer(
                         type="qual", palette=3)
-                    #+ scale_fill_manual(values=DOMINIO_COLORMAP)
                     + labs(fill="Áreas de salud")
                     + coord_fixed(ratio=1, expand=True)
                     + BASE_THEME_VOID
@@ -176,8 +175,10 @@ with ui.nav_panel("Prevalencia dominios (Áreas de salud)"):
                             y="CENTER_LAT",
                             label="AS_DESC"),
                         size=6)
-                    + scale_fill_brewer(
-                        type="qual", palette=3)
+                    + scale_fill_manual(
+                        values=MASTER_COLORMAP_DOMINIO,
+                        na_value=COLOR_NA
+                    )
                     + labs(fill="Dominio Prevalente")
                     + coord_fixed(ratio=1, expand=True)
                     + BASE_THEME_VOID
@@ -234,8 +235,10 @@ with ui.nav_panel("Prevalencia dominios (Municipios)"):
                         color="gray",
                         size=0.3
                     )
-                    + scale_fill_brewer(
-                        type="qual", palette=3)
+                    + scale_fill_manual(
+                        values=MASTER_COLORMAP_DOMINIO,
+                        na_value=COLOR_NA
+                    )
                     + labs(fill="Dominio Prevalente")
                     + coord_fixed(ratio=1, expand=True)
                     + BASE_THEME_VOID

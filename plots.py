@@ -3,7 +3,8 @@ from polars import selectors as cs
 import plotly.express as px
   
 
-COLOR_PALETTE = px.colors.qualitative.D3
+# https://plotly.com/python/discrete-color/
+COLOR_PALETTE = px.colors.qualitative.Dark24
 
 
 def get_domain_colormap(df: pl.DataFrame, domain_col: str = "DOMINIO") -> dict:
@@ -11,9 +12,10 @@ def get_domain_colormap(df: pl.DataFrame, domain_col: str = "DOMINIO") -> dict:
     Returns a consistent color mapping for all distinct domains.
     Colors are assigned alphabetically to ensure consistency across plots.
     """
+    
     domains = sorted(df[domain_col].drop_nulls().unique().to_list())
     return {
-        domain: COLOR_PALETTE[i % len(COLOR_PALETTE)]
+        domain: COLOR_PALETTE[i]
         for i, domain in enumerate(domains)
     }
 
