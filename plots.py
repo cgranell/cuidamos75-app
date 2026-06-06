@@ -1,7 +1,7 @@
 import polars as pl 
 from polars import selectors as cs
-import plotly.express as px
 
+import plotly.express as px
 from pypalettes import load_palette
 
 # https://plotly.com/python/discrete-color/
@@ -79,3 +79,104 @@ def plotly_heatmap_dominios(
     )
 
     return fig
+
+
+def plotly_donut_clases(
+    df: pl.DataFrame,
+    message: str = "Haz clic en un municipio/area salud <br>para ver la(s) clase(s) por dominio prevalente"
+):
+    
+    if df is None or df.is_empty():
+        fig = px.pie(names=[], values=[], hole=0.55)
+        fig.update_layout(
+            annotations=[dict(text=message,
+            x=0.5, y=0.5, showarrow=False, font=dict(size=13))],
+            margin=dict(t=30, b=10, l=10, r=10),
+        )
+        return fig
+    
+    
+    fig = px.pie(
+        df.to_pandas(),
+        names="CLASE",
+        values="CLASE_TOTAL",
+        hole=0.55,
+        color="CLASE",
+        # color_discrete_map=MASTER_COLORMAP_CLASE,   # keep colors stable across municipios
+    )
+
+    fig.update_traces(
+        textposition="outside",
+        textinfo="percent+label",
+        sort=False,                 # don't reorder slices -> stable colors
+        hovertemplate="<b>%{label}</b><br>%{value} (%{percent})<extra></extra>",
+    )
+    fig.update_layout(
+        showlegend=False,            # labels are on the slices; legend is redundant
+        margin=dict(t=40, b=10, l=10, r=10),
+        annotations=[dict(text=f"{int(df['CLASE_TOTAL'].sum())}<br>casos",
+                        x=0.5, y=0.5, showarrow=False, font=dict(size=15))],
+    )
+    return fig
+
+    
+                
+"""
+def leaflet_map_dominio_prevalente(
+    gdf: gpd.GeoDataFrame,
+    geom_var: str = "AS_DESC",
+    domain_col: str = "DOMINIO_PREVALENTE") -> Map: 
+
+    # Mapa coropleta por área de salut (with leaflet, categorical cloropeth)
+    # leaflet needs WGS84 lon/lat, but our geodata is already in that CRS (EPSG:4326), so we can use it directly
+    # We need to convert the geodataframe to GeoJSON format for use in leaflet                
+    selected_gdf_json = json.loads(gdf.to_json())
+                
+    # categorical fill: replaces scale_fill_manual(values=..., na_value=...)
+    def style_callback(feature):
+        dom = feature["properties"].get(domain_col)
+        color = COLOR_NA if dom is None else MASTER_COLORMAP_DOMINIO.get(dom, COLOR_NA)
+        return {
+            "fillColor": color,
+            "color": "gray",     # was color="gray"
+            "weight": 0.3,       # was size=0.3 (line width)
+            "fillOpacity": 0.60,
+        }
+
+    layer = GeoJSON (
+        data=selected_gdf_json,
+        style_callback=style_callback,
+        hover_style={"weight": 1.2, "color": "black"}, # hovered municipality/as outlines itself 
+    )
+
+    # centre on the data extent
+    minx, miny, maxx, maxy = gdf.total_bounds
+    center = ((miny + maxy) / 2, (minx + maxx) / 2)   # (lat, lon)
+
+    m = Map(
+        center=center,
+        zoom=9,
+        basemap=basemaps.CartoDB.Positron, 
+        scroll_wheel_zoom=True)
+    m.add(layer)
+
+    m.fit_bounds([[miny, minx], [maxy, maxx]])
+
+    # floating info box on the map
+    info = HTML("<i>Pasa el ratón sobre un área de salud</i>")
+    info.layout.margin = "0 0 0 0"
+    m.add(WidgetControl(widget=info, position="topright"))
+
+    def describe(feature, **kwargs):
+        props = feature["properties"]
+        geom_desc = props.get(geom_var)
+        dom_prev = props.get(domain_col)
+        dom_prev = dom_prev if dom_prev is not None else "Sin datos"
+        info.value = (f"<b>{geom_desc}</b>: {dom_prev}")
+
+    layer.on_hover(describe)   
+
+    return m
+"""
+
+
