@@ -26,7 +26,11 @@ from plotnine import (
 
 from shiny import reactive
 from shiny.express import input, ui, render
-from shinywidgets import render_plotly
+from shinywidgets import render_plotly, render_widget
+from ipyleaflet import Map, GeoJSON, WidgetControl, basemaps
+from ipywidgets import HTML
+
+import json
 
 #param_periodo = "PRE-PANDEMIA"  # "INTRA-PANDEMIA, "POST-PANDENIA"
 
@@ -128,7 +132,7 @@ with ui.nav_panel("Prevalencia dominios (Áreas de salud)"):
 
     with ui.layout_columns(col_widths=(7, 5)):
         with ui.card(full_screen=True):
-            ui.card_header("Heatmap dominios por AS")
+            ui.card_header("Todos los dominios por área de salud (heatmap)")
 
             @render_plotly
             def heatmap_as_dominio_prevalente():
@@ -150,9 +154,10 @@ with ui.nav_panel("Prevalencia dominios (Áreas de salud)"):
 
         #with ui.layout_column_wrap(col_widths=(1 / 2)):
         with ui.card(full_screen=True):
-            ui.card_header("Mapa dominio prevalente")
+            ui.card_header("Dominio prevalente por área de salud")
 
-            @render.plot
+            #@render.plot
+            @render_widget
             def plot_as_dominio_prevalente():
 
                 # Prepara geodataframe
@@ -163,29 +168,82 @@ with ui.nav_panel("Prevalencia dominios (Áreas de salud)"):
                         how="inner") 
                         #left para mantener todas las AS, incluso las que no tienen casos registrados (que aparecerán con DOMINIO_PREVALENTE nulo)
                 )   
-                # Mapa coropleta por área de salud    
-                return (
-                    ggplot(selected_gdf)
-                    + geom_map(
-                        mapping=aes(fill="DOMINIO_PREVALENTE"),
-                        color="gray",
-                        size=0.3
-                    )
-                    + geom_text(
-                        aes(
-                            x="CENTER_LON",
-                            y="CENTER_LAT",
-                            label="AS_DESC"),
-                        size=6)
-                    + scale_fill_manual(
-                        values=MASTER_COLORMAP_DOMINIO,
-                        na_value=COLOR_NA
-                    )
-                    + labs(fill="Dominio Prevalente")
-                    + coord_fixed(ratio=1, expand=True)
-                    + BASE_THEME_VOID
-                    + THEME_LEGEND_BOTTOM
+                # Mapa coropleta por área de salud  (plotnine)
+                # return (
+                #    ggplot(selected_gdf)
+                #    + geom_map(
+                #        mapping=aes(fill="DOMINIO_PREVALENTE"),
+                #        color="gray",
+                #        size=0.3
+                #    )
+                #    + geom_text(
+                #        aes(
+                #            x="CENTER_LON",
+                #            y="CENTER_LAT",
+                #            label="AS_DESC"),
+                #        size=6)
+                #    + scale_fill_manual(
+                #        values=MASTER_COLORMAP_DOMINIO,
+                #        na_value=COLOR_NA
+                #    )
+                #    + labs(fill="Dominio Prevalente")
+                #    + coord_fixed(ratio=1, expand=True)
+                #    + BASE_THEME_VOID
+                #    + THEME_LEGEND_BOTTOM
+                #)
+
+
+                # Mapa coropleta por área de salut (with leaflet, categorical cloropeth)
+                # leaflet needs WGS84 lon/lat, but our geodata is already in that CRS (EPSG:4326), so we can use it directly
+                # We need to convert the geodataframe to GeoJSON format for use in leaflet                
+                selected_gdf_json = json.loads(selected_gdf.to_json())
+                
+                # categorical fill: replaces scale_fill_manual(values=..., na_value=...)
+                def style_callback(feature):
+                    dom = feature["properties"].get("DOMINIO_PREVALENTE")
+                    color = COLOR_NA if dom is None else MASTER_COLORMAP_DOMINIO.get(dom, COLOR_NA)
+                    return {
+                        "fillColor": color,
+                        "color": "gray",     # was color="gray"
+                        "weight": 0.3,       # was size=0.3 (line width)
+                        "fillOpacity": 0.60,
+                    }
+
+                layer = GeoJSON (
+                    data=selected_gdf_json,
+                    style_callback=style_callback,
+                    hover_style={"weight": 1.2, "color": "black"}, # hovered municipality outlines itself 
                 )
+
+                # centre on the data extent
+                minx, miny, maxx, maxy = selected_gdf.total_bounds
+                center = ((miny + maxy) / 2, (minx + maxx) / 2)   # (lat, lon)
+
+                m = Map(
+                    center=center,
+                    zoom=9,
+                    basemap=basemaps.CartoDB.Positron, 
+                    scroll_wheel_zoom=True)
+                m.add(layer)
+
+                m.fit_bounds([[miny, minx], [maxy, maxx]])
+
+                # floating info box on the map
+                info = HTML("<i>Pasa el ratón sobre un área de salud</i>")
+                info.layout.margin = "0 0 0 0"
+                m.add(WidgetControl(widget=info, position="topright"))
+
+                def describe(feature, **kwargs):
+                    props = feature["properties"]
+                    muni_desc = props.get("AS_DESC")
+                    dom_prev = props.get("DOMINIO_PREVALENTE")
+                    dom_prev = dom_prev if dom_prev is not None else "Sin datos"
+                    info.value = (f"<b>{muni_desc}</b>: {dom_prev}")
+
+                layer.on_hover(describe)   
+
+                return m
+
 
             #with ui.card(full_screen=True):
             #    ui.card_header("Tabla de clases por dominio prevalente")
@@ -195,7 +253,7 @@ with ui.nav_panel("Prevalencia dominios (Municipios)"):
 
     with ui.layout_columns(col_widths=(7, 5)):
         with ui.card(full_screen=True):
-            ui.card_header("Heatmap dominios por municipio")
+            ui.card_header("Todos los dominios por municipio (heatmap)")
 
             @render_plotly
             def heatmap_municipio_dominio_prevalente():
@@ -216,9 +274,10 @@ with ui.nav_panel("Prevalencia dominios (Municipios)"):
 
         #with ui.layout_column_wrap(col_widths=(1 / 2)):
         with ui.card(full_screen=True):
-            ui.card_header("Mapa dominio prevalente")
+            ui.card_header("Dominio prevalente por municipio")
             
-            @render.plot
+            #@render.plot
+            @render_widget
             def plot_municipios_dominio_prevalente():
                 # Prepara geodataframe
                 selected_gdf = (
@@ -229,24 +288,77 @@ with ui.nav_panel("Prevalencia dominios (Municipios)"):
                         #left para mantener todos los municipios, incluso los que no tienen casos registrados (que aparecerán con DOMINIO_PREVALENTE nulo
         
                 )   
-                # Mapa coropleta por municipio    
-                return (
-                    ggplot(selected_gdf)
-                    + geom_map(
-                        mapping=aes(fill="DOMINIO_PREVALENTE"),
-                        color="gray",
-                        size=0.3
-                    )
-                    + scale_fill_manual(
-                        values=MASTER_COLORMAP_DOMINIO,
-                        na_value=COLOR_NA
-                    )
-                    + labs(fill="Dominio Prevalente")
-                    + coord_fixed(ratio=1, expand=True)
-                    + BASE_THEME_VOID
-                    + THEME_LEGEND_BOTTOM
+
+                # Mapa coropleta por municipio (with plotnine)
+                #return (
+                #    ggplot(selected_gdf)
+                #    + geom_map(
+                #        mapping=aes(fill="DOMINIO_PREVALENTE"),
+                #        color="gray",
+                #        size=0.3
+                #    )
+                #    + scale_fill_manual(
+                #        values=MASTER_COLORMAP_DOMINIO,
+                #        na_value=COLOR_NA
+                #    )
+                #    + labs(fill="Dominio Prevalente")
+                #    + coord_fixed(ratio=1, expand=True)
+                #    + BASE_THEME_VOID
+                #    + THEME_LEGEND_BOTTOM
+                #)
+
+                # Mapa coropleta por municipio (with leaflet, categorical cloropeth)
+                # leaflet needs WGS84 lon/lat, but our geodata is already in that CRS (EPSG:4326), so we can use it directly
+                # We need to convert the geodataframe to GeoJSON format for use in leaflet                
+                selected_gdf_json = json.loads(selected_gdf.to_json())
+                
+                # categorical fill: replaces scale_fill_manual(values=..., na_value=...)
+                def style_callback(feature):
+                    dom = feature["properties"].get("DOMINIO_PREVALENTE")
+                    color = COLOR_NA if dom is None else MASTER_COLORMAP_DOMINIO.get(dom, COLOR_NA)
+                    return {
+                        "fillColor": color,
+                        "color": "gray",     # was color="gray"
+                        "weight": 0.3,       # was size=0.3 (line width)
+                        "fillOpacity": 0.60,
+                    }
+
+                layer = GeoJSON (
+                    data=selected_gdf_json,
+                    style_callback=style_callback,
+                    hover_style={"weight": 1.2, "color": "black"}, # hovered municipality outlines itself 
                 )
 
+                # centre on the data extent
+                minx, miny, maxx, maxy = selected_gdf.total_bounds
+                center = ((miny + maxy) / 2, (minx + maxx) / 2)   # (lat, lon)
+
+                m = Map(
+                    center=center,
+                    zoom=9,
+                    basemap=basemaps.CartoDB.Positron, 
+                    scroll_wheel_zoom=True)
+                m.add(layer)
+
+                m.fit_bounds([[miny, minx], [maxy, maxx]])
+
+                # floating info box on the map
+                info = HTML("<i>Pasa el ratón sobre un municipio</i>")
+                info.layout.margin = "0 0 0 0"
+                m.add(WidgetControl(widget=info, position="topright"))
+
+                def describe(feature, **kwargs):
+                    props = feature["properties"]
+                    muni_desc = props.get("MUNI_DESC")
+                    dom_prev = props.get("DOMINIO_PREVALENTE")
+                    dom_prev = dom_prev if dom_prev is not None else "Sin datos"
+                    info.value = (f"<b>{muni_desc}</b>: {dom_prev}")
+
+                layer.on_hover(describe)   
+
+                return m
+
+            #ui.card_footer("Pasa el ratón sobre un municipio para ver su información.")
 
         #    with ui.card(full_screen=True):
         #        ui.card_header("Tabla de clases por dominio prevalente")
@@ -266,7 +378,7 @@ with ui.nav_panel("Prevalencia clases por dominio"):
                 )
     
         with ui.card(full_screen=True):
-            ui.card_header("Clases en dominio prevalente por municioio")
+            ui.card_header("Clases en dominio prevalente por municipio")
             
             @render.data_frame
             def tabla_clases_prevalentes_municipio():

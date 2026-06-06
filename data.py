@@ -67,7 +67,8 @@ def geodata_municipios() -> gpd.GeoDataFrame:
     # Descodifica columna geometry (almacenada en WKB) para uso en gpd
     df["geometry"] = df["geometry"].apply(lambda x: wkb.loads(x))
     gdf = gpd.GeoDataFrame(df, geometry="geometry", crs=CRC_SPHERICAL)
-
+    gdf = gdf.set_crs(3857, allow_override=True).to_crs(4326)
+    
     return gdf
 
 def geodata_areas_salud() -> gpd.GeoDataFrame:
@@ -82,7 +83,8 @@ def geodata_areas_salud() -> gpd.GeoDataFrame:
     # Descodifica columna geometry (almacenada en WKB) para uso en gpd
     df["geometry"] = df["geometry"].apply(lambda x: wkb.loads(x))
     gdf = gpd.GeoDataFrame(df, geometry="geometry", crs=CRC_SPHERICAL)
-
+    gdf = gdf.set_crs(3857, allow_override=True).to_crs(4326)
+    
     return gdf
 
 

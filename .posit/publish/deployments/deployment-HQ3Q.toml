@@ -10,8 +10,8 @@ id = "019db04e-d31e-392e-9eda-d1818442ee13"
 dashboard_url = "https://connect.posit.cloud/cgranell/content/019db04e-d31e-392e-9eda-d1818442ee13"
 direct_url = "https://019db04e-d31e-392e-9eda-d1818442ee13.share.connect.posit.cloud"
 logs_url = "https://connect.posit.cloud/cgranell/content/019db04e-d31e-392e-9eda-d1818442ee13/history"
-deployed_at = "2026-05-15T11:04:36.507Z"
-bundle_id = "019e2b4e-dae5-cc46-283a-d6804b65946d"
+deployed_at = "2026-05-15T14:06:56.939Z"
+bundle_id = "019e2bf5-ce5b-18b1-6d4a-bb712dc09a62"
 files = [
     ".posit/publish/cuidamos75-app-FVNI.toml",
     ".posit/publish/deployments/deployment-HQ3Q.toml",
@@ -19,8 +19,8 @@ files = [
     "app.py",
     "data.py",
     "plots.py",
-    "products/geo/as.parquet",
-    "products/geo/municipios.parquet",
+    "products/as.parquet",
+    "products/municipios.parquet",
     "products/nanda_periodos.parquet",
     "products/poblacion.parquet",
     "requirements.txt",
@@ -131,6 +131,8 @@ files = [
     "/uv.lock",
     "/.python-version",
     "/plots.py",
+    "/products/municipios.parquet",
+    "/products/as.parquet",
 ]
 title = "cuidamos75-app"
 

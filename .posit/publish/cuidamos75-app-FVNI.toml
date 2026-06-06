@@ -19,6 +19,8 @@ files = [
     "/uv.lock",
     "/.python-version",
     "/plots.py",
+    "/products/municipios.parquet",
+    "/products/as.parquet",
 ]
 title = "cuidamos75-app"
 
