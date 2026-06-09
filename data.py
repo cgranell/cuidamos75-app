@@ -12,7 +12,7 @@ from plotnine import (
     element_rect
 )
 
-from plots import get_domain_colormap
+from plots import get_domain_colormap, get_class_colormap
 
 app_path = Path(__file__).parent
 AS_FILE = app_path / "products" / "as.parquet"
@@ -27,6 +27,7 @@ ICONS = {
     "participantes": icon_svg("users", "solid"),
     "municipios": icon_svg("city"),
     "areas-salud": icon_svg("house-medical"),
+    "info": icon_svg("circle-info"),
 }
 
 BASE_THEME_VOID = (
@@ -128,5 +129,6 @@ participantes = participantes_data()
 
 # Build once from your base data (not filtered) so colors are stable
 MASTER_COLORMAP_DOMINIO = get_domain_colormap(nanda_periodos, domain_col="DOMINIO")
+MASTER_COLORMAP_CLASES = get_class_colormap(nanda_periodos, class_col="CLASE")
 COLOR_NA = "#cccccc"
         

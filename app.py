@@ -16,7 +16,7 @@ from data import (
     ICONS, 
     BASE_THEME_VOID,
     THEME_LEGEND_BOTTOM,
-    MASTER_COLORMAP_DOMINIO, COLOR_NA, 
+    MASTER_COLORMAP_DOMINIO, MASTER_COLORMAP_CLASES, COLOR_NA, 
     municipios,
     areas_salud,
     nanda_periodos,
@@ -132,18 +132,33 @@ with ui.nav_panel("Contexto"):
                     + BASE_THEME_VOID
                 )
 
+################################################
+#
+# Prevalencia dominios (Áreas de salud)
+#
+################################################
 with ui.nav_panel("Prevalencia dominios (Áreas de salud)"):
 
     with ui.layout_columns(col_widths=(7, 5)):
-        with ui.card(full_screen=True):
-            ui.card_header("Todos los dominios por área de salud (heatmap)")
 
+        ##### PANEL IZQUIERDO
+        with ui.card(full_screen=True):
+            with ui.card_header():
+                "Todos los dominios por área de salud (heatmap)"
+                with ui.toolbar(align="right"):
+                    ui.toolbar_input_button(
+                        id="info_heatmap_as",
+                        label="Info",
+                        icon=ICONS["info"],
+                        tooltip="Color según escala log: Amarillo (baja prevalencia) → Naranja → Rojo (alta prevalencia). Números en cada celda son conteo de casos, ignorando escala log."
+                    )
+        
             @render_plotly
             def heatmap_as_dominio_prevalente():
 
                 df = (
                     selected()
-                     .group_by(
+                    .group_by(
                         pl.col("AS_DESC"), 
                         pl.col("DOMINIO"))
                     .agg(pl.len().alias("DOMINIO_TOTAL"))
@@ -154,9 +169,9 @@ with ui.nav_panel("Prevalencia dominios (Áreas de salud)"):
 
                 return plotly_heatmap_dominios(df, geom_var="AS_DESC", log_scale=True)
 
-            ui.card_footer("Color codifica escala log: Amarillo (baja prevalencia) → Naranja → Rojo (alta prevalencia). Números en cada celda son conteo de casos, ignorando escala log.")
-
         with ui.layout_column_wrap(width=(1 / 1)):
+        #with ui.layout_columns(col_widths=12, row_heights=(2,1)):  
+            ##### PANEL DERECHO SUPERIOR
             with ui.card(full_screen=True):
                 ui.card_header("Dominio prevalente por área de salud")
 
@@ -201,7 +216,7 @@ with ui.nav_panel("Prevalencia dominios (Áreas de salud)"):
 
                     m = Map(
                         center=center,
-                        zoom=9,
+                        zoom=8,
                         basemap=basemaps.CartoDB.Positron, 
                         scroll_wheel_zoom=True)
                     m.add(layer)
@@ -223,12 +238,14 @@ with ui.nav_panel("Prevalencia dominios (Áreas de salud)"):
                     def on_click_select(feature, **kwargs):
                         props = feature["properties"]
                         geom_id = props.get("AS_ID")
-                        geom_desc = props.get("AS_DESC")    
+                        geom_desc = props.get("AS_DESC")   
+                        dom_prev = props.get("DOMINIO_PREVALENTE") 
                         selected_as_id.set(geom_id)
                         selected_as_desc.set(geom_desc)
+                        selected_dominio_prev.set(dom_prev)
 
                     layer.on_hover(describe)
-                    layer.on_click(on_click_select)  # could be used to link with other panels, e.g. show clases prevalentes en esa AS en el panel de "Prevalencia clases por dominio"
+                    layer.on_click(on_click_select)  # used to link with other panels, e.g. show prevalent classes in the selected AS
 
                     return m
 
@@ -259,29 +276,60 @@ with ui.nav_panel("Prevalencia dominios (Áreas de salud)"):
 
 
 
-
-            with ui.card(full_screen=True, height="300px"):
+            ##### PANEL DERECHO INFERIOR
+            with ui.card(full_screen=True):
                 with ui.card_header():
-                    @render.text
-                    def donut_title():
-                        selected_as = selected_as_desc.get()
-                        if selected_as is None:
-                            return "Clases por dominio prevalente en área de salud"
-                        else:
-                            return f"Clases por dominio prevalente en {selected_as}"
-
+                    "Clases en dominio prevalente por área de salud"
+                    with ui.toolbar(align="right"):
+                        ui.toolbar_input_button(
+                            id="info_donut_as",
+                            label="Info",
+                            icon=ICONS["info"],
+                            tooltip="Casos corresponde al número en la celda del área de salud y dominio en el heatmap."
+                        )
 
                 @render_widget
                 def donut_clases_por_as():
-                    return plotly_donut_clases(por_as_seleccionada_clases_pl())
+                    return (
+                        plotly_donut_clases(
+                            por_as_seleccionada_clases_pl(), 
+                            message="una área de salud", 
+                            cmap=MASTER_COLORMAP_CLASES)
+                        )
+
+                with ui.card_footer():
+                    @render.ui
+                    def donut_footer_as():
+                        selected_as = selected_as_desc.get()
+                        selected_dominio = selected_dominio_prev.get()
+                        if selected_as is None:
+                            return ui.HTML("Sin selección.")
+                        else:
+                            return ui.HTML(f"<b>{selected_as}</b>: {selected_dominio}")
+
                 
 
+################################################
+#
+# Prevalencia dominios (Municipios)
+#
+################################################
 
 with ui.nav_panel("Prevalencia dominios (Municipios)"):
 
     with ui.layout_columns(col_widths=(7, 5)):
-        with ui.card(full_screen=True):
-            ui.card_header("Todos los dominios por municipio (heatmap)")
+        ##### PANEL IZQUIERDO
+        with ui.card(full_screen=True):    
+            with ui.card_header():
+                "Todos los dominios por municipio (heatmap)"
+                with ui.toolbar(align="right"):
+                    ui.toolbar_input_button(
+                        id="info_heatmap_municipio",
+                        label="Info",
+                        icon=ICONS["info"],
+                        tooltip="Color según escala log: Amarillo (baja prevalencia) → Naranja → Rojo (alta prevalencia). Números en cada celda son conteo de casos, ignorando escala log."
+                    )
+
 
             @render_plotly
             def heatmap_municipio_dominio_prevalente():
@@ -298,98 +346,137 @@ with ui.nav_panel("Prevalencia dominios (Municipios)"):
 
                 return plotly_heatmap_dominios(df, log_scale=True)
 
-            ui.card_footer("Color codifica escala log: Amarillo (baja prevalencia) → Naranja → Rojo (alta prevalencia). Números en cada celda son conteo de casos, ignorando escala log.")
-
-        #with ui.layout_column_wrap(col_widths=(1 / 2)):
-        with ui.card(full_screen=True):
-            ui.card_header("Dominio prevalente por municipio")
+    
+        with ui.layout_column_wrap(width=(1 / 1)):
+        #with ui.layout_columns(col_widths=12, row_heights=(2,1)):  
+            ##### PANEL DERECHO SUPERIOR
+            with ui.card(full_screen=True):
+                ui.card_header("Dominio prevalente por municipio")
             
-            #@render.plot
-            @render_widget
-            def plot_municipios_dominio_prevalente():
-                # Prepara geodataframe
-                selected_gdf = (
-                    municipios_data().merge(
-                        por_municipio_dominio_prevalente_pl().to_pandas(), 
-                        on="MUNI_CODINE", 
-                        how="left") 
-                        #left para mantener todos los municipios, incluso los que no tienen casos registrados (que aparecerán con DOMINIO_PREVALENTE nulo
-        
-                )   
+                #@render.plot
+                @render_widget
+                def plot_municipios_dominio_prevalente():
+                    # Prepara geodataframe
+                    selected_gdf = (
+                        municipios_data().merge(
+                            por_municipio_dominio_prevalente_pl().to_pandas(), 
+                            on="MUNI_CODINE", 
+                            how="left") 
+                            #left para mantener todos los municipios, incluso los que no tienen casos registrados (que aparecerán con DOMINIO_PREVALENTE nulo
+            
+                    )   
 
-                # Mapa coropleta por municipio (with plotnine)
-                #return (
-                #    ggplot(selected_gdf)
-                #    + geom_map(
-                #        mapping=aes(fill="DOMINIO_PREVALENTE"),
-                #        color="gray",
-                #        size=0.3
-                #    )
-                #    + scale_fill_manual(
-                #        values=MASTER_COLORMAP_DOMINIO,
-                #        na_value=COLOR_NA
-                #    )
-                #    + labs(fill="Dominio Prevalente")
-                #    + coord_fixed(ratio=1, expand=True)
-                #    + BASE_THEME_VOID
-                #    + THEME_LEGEND_BOTTOM
-                #)
+                    # Mapa coropleta por municipio (with plotnine)
+                    #return (
+                    #    ggplot(selected_gdf)
+                    #    + geom_map(
+                    #        mapping=aes(fill="DOMINIO_PREVALENTE"),
+                    #        color="gray",
+                    #        size=0.3
+                    #    )
+                    #    + scale_fill_manual(
+                    #        values=MASTER_COLORMAP_DOMINIO,
+                    #        na_value=COLOR_NA
+                    #    )
+                    #    + labs(fill="Dominio Prevalente")
+                    #    + coord_fixed(ratio=1, expand=True)
+                    #    + BASE_THEME_VOID
+                    #    + THEME_LEGEND_BOTTOM
+                    #)
 
-                # Mapa coropleta por municipio (with leaflet, categorical cloropeth)
-                # leaflet needs WGS84 lon/lat, but our geodata is already in that CRS (EPSG:4326), so we can use it directly
-                # We need to convert the geodataframe to GeoJSON format for use in leaflet                
-                selected_gdf_json = json.loads(selected_gdf.to_json())
+                    # Mapa coropleta por municipio (with leaflet, categorical cloropeth)
+                    # leaflet needs WGS84 lon/lat, but our geodata is already in that CRS (EPSG:4326), so we can use it directly
+                    # We need to convert the geodataframe to GeoJSON format for use in leaflet                
+                    selected_gdf_json = json.loads(selected_gdf.to_json())
+                    
+                    # categorical fill: replaces scale_fill_manual(values=..., na_value=...)
+                    def style_callback(feature):
+                        dom = feature["properties"].get("DOMINIO_PREVALENTE")
+                        color = COLOR_NA if dom is None else MASTER_COLORMAP_DOMINIO.get(dom, COLOR_NA)
+                        return {
+                            "fillColor": color,
+                            "color": "gray",     # was color="gray"
+                            "weight": 0.3,       # was size=0.3 (line width)
+                            "fillOpacity": 0.60,
+                        }
+
+                    layer = GeoJSON (
+                        data=selected_gdf_json,
+                        style_callback=style_callback,
+                        hover_style={"weight": 1.2, "color": "black"}, # hovered municipality outlines itself 
+                    )
+
+                    # centre on the data extent
+                    minx, miny, maxx, maxy = selected_gdf.total_bounds
+                    center = ((miny + maxy) / 2, (minx + maxx) / 2)   # (lat, lon)
+
+                    m = Map(
+                        center=center,
+                        zoom=8,
+                        basemap=basemaps.CartoDB.Positron, 
+                        scroll_wheel_zoom=True)
+                    m.add(layer)
+
+                    m.fit_bounds([[miny, minx], [maxy, maxx]])
+
+                    # floating info box on the map
+                    info = HTML("Pasa el ratón sobre un municipio")
+                    info.layout.margin = "0 0 0 0"
+                    m.add(WidgetControl(widget=info, position="topright"))
+
+                    def describe(feature, **kwargs):
+                        props = feature["properties"]
+                        muni_desc = props.get("MUNI_DESC")
+                        dom_prev = props.get("DOMINIO_PREVALENTE")
+                        dom_prev = dom_prev if dom_prev is not None else "Sin datos"
+                        info.value = (f"<b>{muni_desc}</b>: {dom_prev}")
+
+                    def on_click_select(feature, **kwargs):
+                        props = feature["properties"]
+                        geom_id = props.get("MUNI_CODINE")
+                        geom_desc = props.get("MUNI_DESC")
+                        dom_prev = props.get("DOMINIO_PREVALENTE")    
+                        selected_muni_codine.set(geom_id)
+                        selected_muni_desc.set(geom_desc)
+                        selected_dominio_prev.set(dom_prev)
+
+                    layer.on_hover(describe)
+                    layer.on_click(on_click_select)  # used to link with other panels, e.g. show prevalent classes in the selected municipality
+
+                    return m
+
+
+            ##### PANEL DERECHO INFERIOR
+            with ui.card(full_screen=True):
+                with ui.card_header():
+                    "Clases en dominio prevalente por municipio"
+                    with ui.toolbar(align="right"):
+                        ui.toolbar_input_button(
+                            id="info_donut_municipio",
+                            label="Info",
+                            icon=ICONS["info"],
+                            tooltip="Casos corresponde al número en la celda del municipio y dominio en el heatmap."
+                        )
+
+                    
+                @render_widget
+                def donut_clases_por_municipios():
+                    return (
+                        plotly_donut_clases(
+                            por_municipio_seleccionado_clases_pl(), 
+                            message="un municipio", 
+                            cmap=MASTER_COLORMAP_CLASES)
+                        )
                 
-                # categorical fill: replaces scale_fill_manual(values=..., na_value=...)
-                def style_callback(feature):
-                    dom = feature["properties"].get("DOMINIO_PREVALENTE")
-                    color = COLOR_NA if dom is None else MASTER_COLORMAP_DOMINIO.get(dom, COLOR_NA)
-                    return {
-                        "fillColor": color,
-                        "color": "gray",     # was color="gray"
-                        "weight": 0.3,       # was size=0.3 (line width)
-                        "fillOpacity": 0.60,
-                    }
-
-                layer = GeoJSON (
-                    data=selected_gdf_json,
-                    style_callback=style_callback,
-                    hover_style={"weight": 1.2, "color": "black"}, # hovered municipality outlines itself 
-                )
-
-                # centre on the data extent
-                minx, miny, maxx, maxy = selected_gdf.total_bounds
-                center = ((miny + maxy) / 2, (minx + maxx) / 2)   # (lat, lon)
-
-                m = Map(
-                    center=center,
-                    zoom=9,
-                    basemap=basemaps.CartoDB.Positron, 
-                    scroll_wheel_zoom=True)
-                m.add(layer)
-
-                m.fit_bounds([[miny, minx], [maxy, maxx]])
-
-                # floating info box on the map
-                info = HTML("<i>Pasa el ratón sobre un municipio</i>")
-                info.layout.margin = "0 0 0 0"
-                m.add(WidgetControl(widget=info, position="topright"))
-
-                def describe(feature, **kwargs):
-                    props = feature["properties"]
-                    muni_desc = props.get("MUNI_DESC")
-                    dom_prev = props.get("DOMINIO_PREVALENTE")
-                    dom_prev = dom_prev if dom_prev is not None else "Sin datos"
-                    info.value = (f"<b>{muni_desc}</b>: {dom_prev}")
-
-                layer.on_hover(describe)   
-
-                return m
-
-            #ui.card_footer("Pasa el ratón sobre un municipio para ver su información.")
-
-        #    with ui.card(full_screen=True):
-        #        ui.card_header("Tabla de clases por dominio prevalente")
+                with ui.card_footer():
+                    @render.ui
+                    def donut_footer_muni():
+                        selected_muni = selected_muni_desc.get()
+                        selected_dominio = selected_dominio_prev.get()
+                        if selected_muni is None:
+                            return ui.HTML("Sin selección.")
+                        else:
+                            return ui.HTML(f"<b>{selected_muni}</b>: {selected_dominio}")
 
 
 with ui.nav_panel("Prevalencia clases por dominio"):
@@ -417,10 +504,12 @@ with ui.nav_panel("Prevalencia clases por dominio"):
 
 
 
-# Shared selection state (AS_ID, AS_DESC, MUNI_CODINE)
+# Shared selection state (AS_ID, AS_DESC, MUNI_CODINE, MUNI_CODINE)
 selected_as_id = reactive.value(None)
 selected_as_desc = reactive.value(None)
 selected_muni_codine = reactive.value(None)
+selected_muni_desc = reactive.value(None)
+selected_dominio_prev = reactive.value(None)
 
 # Reactive data subsets based on user input
 
@@ -556,6 +645,21 @@ def por_as_clase_prevalentes_pl():
             pl.len().alias("CLASE_TOTAL"))
         .sort("AS_ID", "DOMINIO_PREVALENTE", "CLASE_TOTAL", descending=[False, False, True])
 
+    )
+
+
+
+@reactive.calc
+def por_municipio_seleccionado_clases_pl():
+    selected_muni = selected_muni_codine.get()
+
+    if selected_muni is None:
+        return None
+    return (
+        por_municipio_clase_prevalentes_pl()
+        .filter(pl.col("MUNI_CODINE") == selected_muni)
+        .select(pl.col("CLASE"), pl.col("CLASE_TOTAL"))
+        .sort(pl.col("CLASE_TOTAL"), descending=True)
     )
 
 

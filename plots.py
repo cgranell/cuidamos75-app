@@ -9,7 +9,7 @@ COLOR_PALETTE = px.colors.qualitative.Dark24
 
 # https://pypi.org/project/pypalettes/
 # Python Color Palette Finder: https://python-graph-gallery.com/color-palette-finder/
-CONTEXT_PALETTE = load_palette("Autumn")
+CONTEXT_PALETTE = load_palette("Autumn", repeat=3)
 
 def get_domain_colormap(df: pl.DataFrame, domain_col: str = "DOMINIO") -> dict:
     """
@@ -23,6 +23,19 @@ def get_domain_colormap(df: pl.DataFrame, domain_col: str = "DOMINIO") -> dict:
         for i, domain in enumerate(domains)
     }
 
+
+def get_class_colormap(df: pl.DataFrame, class_col: str = "CLASE") -> dict:
+    """
+    Returns a consistent color mapping for all distinct classes.
+    Colors are assigned alphabetically to ensure consistency across plots.
+    """
+    
+    classes = sorted(df[class_col].drop_nulls().unique().to_list())
+    print(f"number of clases {len(classes)}")
+    return {
+        cls: CONTEXT_PALETTE[i]
+        for i, cls in enumerate(classes)
+    }
 
 
 def plotly_heatmap_dominios(
@@ -83,13 +96,15 @@ def plotly_heatmap_dominios(
 
 def plotly_donut_clases(
     df: pl.DataFrame,
-    message: str = "Haz clic en un municipio/area salud <br>para ver la(s) clase(s) por dominio prevalente"
-):
+    message: str, # "municipio" o "área de salud" para el mensaje de "haz clic en..." cuando no hay datos
+    cmap: dict,
+    var_categorical: str = "CLASE",
+    var_numeric: str = "CLASE_TOTAL"):
     
     if df is None or df.is_empty():
         fig = px.pie(names=[], values=[], hole=0.55)
         fig.update_layout(
-            annotations=[dict(text=message,
+            annotations=[dict(text=f"Haz clic en {message} <br>para ver la(s) clase(s) por dominio prevalente",
             x=0.5, y=0.5, showarrow=False, font=dict(size=13))],
             margin=dict(t=30, b=10, l=10, r=10),
         )
@@ -98,11 +113,11 @@ def plotly_donut_clases(
     
     fig = px.pie(
         df.to_pandas(),
-        names="CLASE",
-        values="CLASE_TOTAL",
+        names=var_categorical,
+        values=var_numeric,
         hole=0.55,
-        color="CLASE",
-        # color_discrete_map=MASTER_COLORMAP_CLASE,   # keep colors stable across municipios
+        color=var_categorical,
+        color_discrete_map=cmap,   # keep colors stable across municipios
     )
 
     fig.update_traces(
@@ -113,8 +128,8 @@ def plotly_donut_clases(
     )
     fig.update_layout(
         showlegend=False,            # labels are on the slices; legend is redundant
-        margin=dict(t=40, b=10, l=10, r=10),
-        annotations=[dict(text=f"{int(df['CLASE_TOTAL'].sum())}<br>casos",
+        #margin=dict(t=40, b=10, l=10, r=10),
+        annotations=[dict(text=f"{int(df[var_numeric].sum())}<br>casos",
                         x=0.5, y=0.5, showarrow=False, font=dict(size=15))],
     )
     return fig
