@@ -479,28 +479,92 @@ with ui.nav_panel("Prevalencia dominios (Municipios)"):
                             return ui.HTML(f"<b>{selected_muni}</b>: {selected_dominio}")
 
 
-with ui.nav_panel("Prevalencia clases por dominio"):
+with ui.nav_panel("Mapas"):
 
     with ui.layout_columns(col_widths=(6, 6)):
         with ui.card(full_screen=True):
-            ui.card_header("Clases en dominio prevalente por área de salud")
+            ui.card_header("Mapa de dominio prevalente de todas las CCAA por área de salud")
             
-            @render.data_frame
-            def tabla_clases_prevalentes_as():
-                return render.DataTable(
-                    por_as_clase_prevalentes_pl().drop("AS_ID").to_pandas(),
-                    filters=True
-                )
+            #@render.data_frame
+            #def tabla_clases_prevalentes_as():
+            #    return render.DataTable(
+            #        por_as_clase_prevalentes_pl().drop("AS_ID").to_pandas(),
+            #        filters=True
+            #    )
     
         with ui.card(full_screen=True):
-            ui.card_header("Clases en dominio prevalente por municipio")
+            ui.card_header("Mapa de dominio prevalente de todas las CCAA por municipio")
             
-            @render.data_frame
-            def tabla_clases_prevalentes_municipio():
-                return render.DataTable(
-                    por_municipio_clase_prevalentes_pl().drop("MUNI_CODINE").to_pandas(),
-                    filters=True
+            #@render.data_frame
+            #def tabla_clases_prevalentes_municipio():
+            #    return render.DataTable(
+            #        por_municipio_clase_prevalentes_pl().drop("MUNI_CODINE").to_pandas(),
+            #        filters=True
+            #    )
+
+            @render_widget
+            def plot_todos_municipios_dominio_prevalente():
+                # Prepara geodataframe
+                selected_gdf = (
+                    municipios_data().merge(
+                        por_municipio_dominio_prevalente_pl().to_pandas(), 
+                        on="MUNI_CODINE", 
+                        how="left") 
+                        #left para mantener todos los municipios, incluso los que no tienen casos registrados (que aparecerán con DOMINIO_PREVALENTE nulo
+        
+                )   
+              
+
+                # Mapa coropleta por municipio (with leaflet, categorical cloropeth)
+                # leaflet needs WGS84 lon/lat, but our geodata is already in that CRS (EPSG:4326), so we can use it directly
+                # We need to convert the geodataframe to GeoJSON format for use in leaflet                
+                selected_gdf_json = json.loads(selected_gdf.to_json())
+                
+                # categorical fill: replaces scale_fill_manual(values=..., na_value=...)
+                def style_callback(feature):
+                    dom = feature["properties"].get("DOMINIO_PREVALENTE")
+                    color = COLOR_NA if dom is None else MASTER_COLORMAP_DOMINIO.get(dom, COLOR_NA)
+                    return {
+                        "fillColor": color,
+                        "color": "gray",     # was color="gray"
+                        "weight": 0.3,       # was size=0.3 (line width)
+                        "fillOpacity": 0.60,
+                    }
+
+                layer = GeoJSON (
+                    data=selected_gdf_json,
+                    style_callback=style_callback,
+                    hover_style={"weight": 1.2, "color": "black"}, # hovered municipality outlines itself 
                 )
+
+                # centre on the data extent
+                minx, miny, maxx, maxy = selected_gdf.total_bounds
+                center = ((miny + maxy) / 2, (minx + maxx) / 2)   # (lat, lon)
+
+                m = Map(
+                    center=center,
+                    zoom=6,
+                    basemap=basemaps.CartoDB.Positron, 
+                    scroll_wheel_zoom=True)
+                m.add(layer)
+
+                m.fit_bounds([[miny, minx], [maxy, maxx]])
+
+                # floating info box on the map
+                info = HTML("Pasa el ratón sobre un municipio")
+                info.layout.margin = "0 0 0 0"
+                m.add(WidgetControl(widget=info, position="topright"))
+
+                def describe(feature, **kwargs):
+                    props = feature["properties"]
+                    muni_desc = props.get("MUNI_DESC")
+                    dom_prev = props.get("DOMINIO_PREVALENTE")
+                    dom_prev = dom_prev if dom_prev is not None else "Sin datos"
+                    info.value = (f"<b>{muni_desc}</b>: {dom_prev}")
+
+                layer.on_hover(describe)
+
+                return m
 
 
 
