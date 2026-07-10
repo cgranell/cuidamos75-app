@@ -128,7 +128,7 @@ participantes = participantes_data()
 
 
 # Build once from your base data (not filtered) so colors are stable
-MASTER_COLORMAP_DOMINIO = get_domain_colormap(nanda_periodos, domain_col="DOMINIO")
+MASTER_COLORMAP_DOMINIO = get_domain_colormap(nanda_periodos, domain_col="DOMINIO_LABEL")
 MASTER_COLORMAP_CLASES = get_class_colormap(nanda_periodos, class_col="CLASE")
 COLOR_NA = "#cccccc"
         

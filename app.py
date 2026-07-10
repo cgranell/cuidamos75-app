@@ -31,10 +31,12 @@ from plotnine import (
 from shiny import reactive
 from shiny.express import input, ui, render
 from shinywidgets import render_plotly, render_widget
-from ipyleaflet import Map, GeoJSON, WidgetControl, basemaps
+from ipyleaflet import Map, GeoJSON, WidgetControl, Choropleth, basemaps
 from ipywidgets import HTML
 
 import json
+
+from branca.colormap import linear
 
 #param_periodo = "PRE-PANDEMIA"  # "INTRA-PANDEMIA, "POST-PANDENIA"
 
@@ -50,7 +52,7 @@ with ui.sidebar():
         )
     ui.input_radio_buttons(  
         id = "param_ccaa",  
-        label = "Selecciona CCAA:",  
+        label = "Región o provincia:",  
         #choices ={"14": "Murcia", "15": "Navarra"},
         choices ={"14": "Murcia"},
         inline = False
@@ -58,7 +60,7 @@ with ui.sidebar():
 
     ui.input_select(  
         id = "param_periodo",  
-        label = "Selecciona periodo:",  
+        label = "Periodo:",  
         choices ={
             "PRE-PANDEMIA": "Pre-pandemia (2018-2019)", 
             "INTRA-PANDEMIA": "Intra-pandemia (2020-2021)",
@@ -134,10 +136,10 @@ with ui.nav_panel("Contexto"):
 
 ################################################
 #
-# Prevalencia dominios (Áreas de salud)
+# Dominio prevalente (Áreas de salud)
 #
 ################################################
-with ui.nav_panel("Prevalencia dominios (Áreas de salud)"):
+with ui.nav_panel("Dominio prevalente (Áreas de salud)"):
 
     with ui.layout_columns(col_widths=(7, 5)):
 
@@ -160,9 +162,9 @@ with ui.nav_panel("Prevalencia dominios (Áreas de salud)"):
                     selected()
                     .group_by(
                         pl.col("AS_DESC"), 
-                        pl.col("DOMINIO"))
+                        pl.col("DOMINIO_LABEL"))
                     .agg(pl.len().alias("DOMINIO_TOTAL"))
-                    .pivot(index="AS_DESC", on="DOMINIO", values="DOMINIO_TOTAL")
+                    .pivot(index="AS_DESC", on="DOMINIO_LABEL", values="DOMINIO_TOTAL")
                     .fill_null(0)
                     .sort("AS_DESC", descending=False)
                 )
@@ -311,11 +313,11 @@ with ui.nav_panel("Prevalencia dominios (Áreas de salud)"):
 
 ################################################
 #
-# Prevalencia dominios (Municipios)
+# Dominio prevalente (Municipios)
 #
 ################################################
 
-with ui.nav_panel("Prevalencia dominios (Municipios)"):
+with ui.nav_panel("Dominio prevalente (Municipios)"):
 
     with ui.layout_columns(col_widths=(7, 5)):
         ##### PANEL IZQUIERDO
@@ -337,9 +339,9 @@ with ui.nav_panel("Prevalencia dominios (Municipios)"):
                     selected()
                      .group_by(
                         pl.col("MUNI_DESC"), 
-                        pl.col("DOMINIO"))
+                        pl.col("DOMINIO_LABEL"))
                     .agg(pl.len().alias("DOMINIO_TOTAL"))
-                    .pivot(index="MUNI_DESC", on="DOMINIO", values="DOMINIO_TOTAL")
+                    .pivot(index="MUNI_DESC", on="DOMINIO_LABEL", values="DOMINIO_TOTAL")
                     .fill_null(0)
                     .sort("MUNI_DESC", descending=False)
                 )
@@ -478,52 +480,88 @@ with ui.nav_panel("Prevalencia dominios (Municipios)"):
                         else:
                             return ui.HTML(f"<b>{selected_muni}</b>: {selected_dominio}")
 
+################################################
+#
+# Mapa de dominios (Municipios)
+#
+################################################
 
-with ui.nav_panel("Mapas"):
+with ui.nav_panel("Mapa de dominios (Municipios)"):
 
-    with ui.layout_columns(col_widths=(6, 6)):
+    with ui.layout_columns(col_widths=(4, 8)):
         with ui.card(full_screen=True):
-            ui.card_header("Mapa de dominio prevalente de todas las CCAA por área de salud")
-            
-            #@render.data_frame
-            #def tabla_clases_prevalentes_as():
-            #    return render.DataTable(
-            #        por_as_clase_prevalentes_pl().drop("AS_ID").to_pandas(),
-            #        filters=True
-            #    )
+            ui.card_header("Selección de dominios")
+
+
+            ui.input_select(  
+                id = "param_dominio",  
+                label = "Dominio:",  
+                choices = [
+                    "01. Promocion salud",
+                    "02. Nutricion",
+                    "03. Eliminacion intercambio",
+                    "04. Actividad reposo",
+                    "05. Percepcion cognicion",
+                    "06. Autopercepcion",
+                    "07. Rol relaciones",
+                    "08. Sexualidad",
+                    "09. Afrontamiento estres",
+                    "10. Principios vitales",
+                    "11. Seguridad proteccion",
+                    "12. Confort"
+                ],
+                selected = "01. Promocion salud"
+            )  
+
+            ui.markdown(
+            """
+            *Nota metodológica*. 
+            - Los municipios sin casos se tratan como 0 casos, por lo que no hay diferencia entre "no se han recopilado datos aquí" y "cero casos".
+            - La escala de color se reajusta cada vez que cambia el dominio, por lo que el mismo color indica un recuento de casos diferente para distintos dominios seleccionados.
+            """)
     
         with ui.card(full_screen=True):
-            ui.card_header("Mapa de dominio prevalente de todas las CCAA por municipio")
+            ui.card_header("Mapa de dominio seleccionado por municipio")
             
             #@render.data_frame
-            #def tabla_clases_prevalentes_municipio():
+            #def tabla_dominio_seleccionado_municipio():
             #    return render.DataTable(
-            #        por_municipio_clase_prevalentes_pl().drop("MUNI_CODINE").to_pandas(),
+            #        por_municipio_dominio_seleccionado_pl().to_pandas(),
             #        filters=True
             #    )
-
             @render_widget
-            def plot_todos_municipios_dominio_prevalente():
+            def plot_municipios_dominio_seleccionado():
+
+                dominio_sel = input.param_dominio()
+
                 # Prepara geodataframe
                 selected_gdf = (
                     municipios_data().merge(
-                        por_municipio_dominio_prevalente_pl().to_pandas(), 
+                        por_municipio_dominio_seleccionado_pl().to_pandas(), 
                         on="MUNI_CODINE", 
                         how="left") 
-                        #left para mantener todos los municipios, incluso los que no tienen casos registrados (que aparecerán con DOMINIO_PREVALENTE nulo
-        
+                        #left para mantener todos los municipios, incluso los que no tienen casos registrados (que aparecerán con DOMINIO_TOTAL nulo
                 )   
               
+                # municipios sin casos del dominio seleccionado -> 0, no "sin datos"
+                selected_gdf["DOMINIO_TOTAL"] = selected_gdf["DOMINIO_TOTAL"].fillna(0)
 
-                # Mapa coropleta por municipio (with leaflet, categorical cloropeth)
+
+                # Mapa coropleta por municipio (with leaflet, numeric cloropeth)
                 # leaflet needs WGS84 lon/lat, but our geodata is already in that CRS (EPSG:4326), so we can use it directly
                 # We need to convert the geodataframe to GeoJSON format for use in leaflet                
                 selected_gdf_json = json.loads(selected_gdf.to_json())
+
+                # continuous colormap over 0 -> max (per-domain rescaling)
                 
-                # categorical fill: replaces scale_fill_manual(values=..., na_value=...)
+                vmax = float(selected_gdf["DOMINIO_TOTAL"].max())
+                cmap = linear.YlOrRd_04.scale(0, vmax)
+                cmap.caption = f"Casos de {dominio_sel}"
+                
+                # numeric fill
                 def style_callback(feature):
-                    dom = feature["properties"].get("DOMINIO_PREVALENTE")
-                    color = COLOR_NA if dom is None else MASTER_COLORMAP_DOMINIO.get(dom, COLOR_NA)
+                    val = feature["properties"].get("DOMINIO_TOTAL")
+                    color = cmap(val if val is not None else 0)
                     return {
                         "fillColor": color,
                         "color": "gray",     # was color="gray"
@@ -537,6 +575,10 @@ with ui.nav_panel("Mapas"):
                     hover_style={"weight": 1.2, "color": "black"}, # hovered municipality outlines itself 
                 )
 
+
+                #Check https://ipyleaflet.readthedocs.io/en/latest/layers/choropleth.html
+                
+                 
                 # centre on the data extent
                 minx, miny, maxx, maxy = selected_gdf.total_bounds
                 center = ((miny + maxy) / 2, (minx + maxx) / 2)   # (lat, lon)
@@ -558,9 +600,9 @@ with ui.nav_panel("Mapas"):
                 def describe(feature, **kwargs):
                     props = feature["properties"]
                     muni_desc = props.get("MUNI_DESC")
-                    dom_prev = props.get("DOMINIO_PREVALENTE")
-                    dom_prev = dom_prev if dom_prev is not None else "Sin datos"
-                    info.value = (f"<b>{muni_desc}</b>: {dom_prev}")
+                    casos = props.get("DOMINIO_TOTAL")
+                    casos = 0 if casos is None else casos
+                    info.value = (f"<b>{muni_desc}</b>: {casos:,} casos de <i>{dominio_sel}</i>")
 
                 layer.on_hover(describe)
 
@@ -568,14 +610,24 @@ with ui.nav_panel("Mapas"):
 
 
 
+
+################################################
+#
 # Shared selection state (AS_ID, AS_DESC, MUNI_CODINE, MUNI_CODINE)
+#
+################################################
+
 selected_as_id = reactive.value(None)
 selected_as_desc = reactive.value(None)
 selected_muni_codine = reactive.value(None)
 selected_muni_desc = reactive.value(None)
 selected_dominio_prev = reactive.value(None)
 
+################################################
+#
 # Reactive data subsets based on user input
+#
+################################################
 
 @reactive.calc
 def municipios_data():
@@ -641,12 +693,12 @@ def por_as_dominio_prevalente_pl():
         selected()
         .group_by(
             pl.col("AS_ID"), 
-            pl.col("DOMINIO"))
+            pl.col("DOMINIO_LABEL"))
         .agg(
             pl.len().alias("DOMINIO_TOTAL"))
         .sort(pl.col("DOMINIO_TOTAL"), descending=True)
         .group_by(pl.col("AS_ID"))
-        .agg(pl.first("DOMINIO").alias("DOMINIO_PREVALENTE"))
+        .agg(pl.first("DOMINIO_LABEL").alias("DOMINIO_PREVALENTE"))
         .sort("AS_ID", descending=False)
     )   
 
@@ -657,15 +709,31 @@ def por_municipio_dominio_prevalente_pl():
         selected()
         .group_by(
             pl.col("MUNI_CODINE"), 
-            pl.col("DOMINIO"))
+            pl.col("DOMINIO_LABEL"))
         .agg(
             pl.len().alias("DOMINIO_TOTAL"))
         .sort(pl.col("DOMINIO_TOTAL"), descending=True)
         .group_by(pl.col("MUNI_CODINE"))
-        .agg(pl.first("DOMINIO").alias("DOMINIO_PREVALENTE"))
+        .agg(pl.first("DOMINIO_LABEL").alias("DOMINIO_PREVALENTE"))
         .sort("MUNI_CODINE", descending=False)
     )   
 
+
+
+@reactive.calc
+def por_municipio_dominio_seleccionado_pl(): 
+    selected_dominio = input.param_dominio()
+
+    return (
+        selected()
+        .filter(pl.col("DOMINIO_LABEL") == selected_dominio)
+        .group_by(
+            pl.col("MUNI_CODINE")
+        )
+        .agg(
+            pl.len().alias("DOMINIO_TOTAL"))
+        .sort(pl.col("DOMINIO_TOTAL"), descending=True)
+    )   
 
 
 @reactive.calc
@@ -687,7 +755,7 @@ def por_as_clase_prevalentes_pl():
     clases_pl = (
         selected()
         .select(
-            pl.col("DOMINIO").alias("DOMINIO_PREVALENTE"),
+            pl.col("DOMINIO_LABEL").alias("DOMINIO_PREVALENTE"),
             pl.col("CLASE"),
             pl.col("AS_ID"),
             pl.col("AS_DESC")
@@ -731,7 +799,7 @@ def por_municipio_clase_prevalentes_pl():
     clases_pl = (
         selected()
         .select(
-            pl.col("DOMINIO").alias("DOMINIO_PREVALENTE"),
+            pl.col("DOMINIO_LABEL").alias("DOMINIO_PREVALENTE"),
             pl.col("CLASE"),
             pl.col("MUNI_CODINE"),
             pl.col("MUNI_DESC")

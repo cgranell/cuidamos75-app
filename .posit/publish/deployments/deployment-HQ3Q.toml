@@ -2,7 +2,7 @@
 "$schema" = "https://cdn.posit.co/publisher/schemas/posit-publishing-record-schema-v3.json"
 server_type = "connect_cloud"
 server_url = "https://connect.posit.cloud"
-client_version = "2.4.0"
+client_version = "2.7.9"
 created_at = "2026-04-21T13:46:36.724Z"
 type = "python-shiny"
 configuration_name = "cuidamos75-app-FVNI"
@@ -10,8 +10,8 @@ id = "019db04e-d31e-392e-9eda-d1818442ee13"
 dashboard_url = "https://connect.posit.cloud/cgranell/content/019db04e-d31e-392e-9eda-d1818442ee13"
 direct_url = "https://019db04e-d31e-392e-9eda-d1818442ee13.share.connect.posit.cloud"
 logs_url = "https://connect.posit.cloud/cgranell/content/019db04e-d31e-392e-9eda-d1818442ee13/history"
-deployed_at = "2026-05-15T14:06:56.939Z"
-bundle_id = "019e2bf5-ce5b-18b1-6d4a-bb712dc09a62"
+deployed_at = "2026-06-09T16:40:28.988Z"
+bundle_id = "019ead41-3f5a-c618-4dec-7a0dfbb698ca"
 files = [
     ".posit/publish/cuidamos75-app-FVNI.toml",
     ".posit/publish/deployments/deployment-HQ3Q.toml",
@@ -31,6 +31,7 @@ requirements = [
     "anywidget==0.11.0",
     "asgiref==3.11.1",
     "asttokens==3.0.1",
+    "branca==0.8.2",
     "certifi==2026.2.25",
     "click==8.3.2",
     "comm==0.2.3",
@@ -45,15 +46,19 @@ requirements = [
     "htmltools==0.6.0",
     "idna==3.11",
     "importlib-metadata==8.7.1",
+    "ipyleaflet==0.20.0",
     "ipython==9.13.0",
     "ipython-pygments-lexers==1.1.1",
     "ipywidgets==8.1.8",
     "jedi==0.20.0",
+    "jinja2==3.1.6",
     "jupyter-core==5.9.1",
+    "jupyter-leaflet==0.20.0",
     "jupyterlab-widgets==3.0.16",
     "kiwisolver==1.5.0",
     "linkify-it-py==2.1.0",
     "markdown-it-py==4.0.0",
+    "markupsafe==3.0.3",
     "matplotlib==3.10.8",
     "matplotlib-inline==0.2.1",
     "mdit-py-plugins==0.5.0",
@@ -99,6 +104,7 @@ requirements = [
     "starlette==1.0.0",
     "statsmodels==0.14.6",
     "traitlets==5.15.0",
+    "traittypes==0.2.3",
     "typing-extensions==4.15.0",
     "uc-micro-py==2.0.0",
     "uvicorn==0.45.0",
@@ -106,6 +112,7 @@ requirements = [
     "wcwidth==0.6.0",
     "websockets==16.0",
     "widgetsnbextension==4.0.15",
+    "xyzservices==2026.3.0",
     "zipp==3.23.1",
 ]
 
