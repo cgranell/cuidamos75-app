@@ -77,11 +77,18 @@ with ui.nav_panel("Contexto"):
             @render.text
             def total_participantes():                 
                 selected_periodo = input.param_periodo()
+                selected_ccaa = input.param_ccaa()
 
-                total_por_ccaa = participantes.height
+                total_por_ccaa = (
+                    participantes
+                    .filter(pl.col("CCAA_CODINE") == selected_ccaa)
+                    .height
+                )
+                
                 total_por_periodo = (
                     nanda_periodos
                     .filter(
+                        pl.col("CCAA_CODINE") == selected_ccaa,
                         pl.col("PERIODO_TIPO") == selected_periodo,
                         pl.col("TIENE_PERIODO")
                     )
