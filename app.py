@@ -6,8 +6,9 @@ os.environ["POLARS_UNKNOWN_EXTENSION_TYPE_BEHAVIOR"] = "load_as_storage"
 #import pyarrow
 import json
 
+import numpy as np
 import polars as pl
-from branca.colormap import linear
+from branca.colormap import StepColormap, linear
 from ipyleaflet import GeoJSON, Map, WidgetControl, basemaps
 from ipywidgets import HTML
 from plotnine import (
@@ -47,13 +48,15 @@ with ui.sidebar():
     ui.markdown(
             """
             Prototipo de visualización de datos de prevalencia de diagnósticos NANDA en personas mayores de 75 años, basado en datos del proyecto [Cuidamos+75](https://cuidamos75.com/).
+            
+            ---
             """     
         )
     ui.input_radio_buttons(  
         id = "param_ccaa",  
         label = "Región o provincia:",  
-        #choices ={"14": "Murcia", "15": "Navarra"},
-        choices ={"14": "Murcia"},
+        choices ={"14": "Murcia", "15": "Navarra"},
+        #choices ={"14": "Murcia"},
         inline = False
     )  
 
@@ -172,6 +175,7 @@ with ui.nav_panel("Dominio prevalente (Áreas de salud)"), ui.layout_columns(col
                     .sort("AS_DESC", descending=False)
                 )
 
+
                 return plotly_heatmap_dominios(df, geom_var="AS_DESC", log_scale=True)
 
         with ui.layout_column_wrap(width=(1 / 1)):
@@ -192,6 +196,20 @@ with ui.nav_panel("Dominio prevalente (Áreas de salud)"), ui.layout_columns(col
                             how="inner") 
                             #left para mantener todas las AS, incluso las que no tienen casos registrados (que aparecerán con DOMINIO_PREVALENTE nulo)
                     )
+
+                    if selected_gdf is None or selected_gdf.empty:
+                        # Create an empty map centered on Spain with a "no data" message
+                        m = Map(
+                            center=(40.4168, -3.7038),  # Madrid, roughly centered on Spain
+                            zoom=5,
+                            basemap=basemaps.CartoDB.Positron,
+                            scroll_wheel_zoom=True,
+                        )
+                        info = HTML("Sin datos disponibles para esta selección")
+                        info.layout.margin = "0 0 0 0"
+                        m.add(WidgetControl(widget=info, position="topright"))
+                        return m
+
 
                     # Mapa coropleta por área de salut (with leaflet, categorical cloropeth)
                     # leaflet needs WGS84 lon/lat, but our geodata is already in that CRS (EPSG:4326), so we can use it directly
@@ -512,12 +530,18 @@ with ui.nav_panel("Mapa de dominios (Municipios)"), ui.layout_columns(col_widths
                 selected = "01. Promocion salud"
             )  
 
-            ui.markdown(
-            """
-            *Nota metodológica*. 
-            - Los municipios sin casos se tratan como 0 casos, por lo que no hay diferencia entre "no se han recopilado datos aquí" y "cero casos".
-            - La escala de color se reajusta cada vez que cambia el dominio, por lo que el mismo color indica un recuento de casos diferente para distintos dominios seleccionados.
-            """)
+
+            ui.HTML(
+                """
+                <div style="font-size: 0.85em; color: #666;">
+                <em>Nota metodológica</em>.
+                <ul>
+                <li>Los municipios sin casos se tratan como 0 casos, por lo que no hay diferencia entre "no se han recopilado datos aquí" y "cero casos".</li>
+                <li>La escala de color se reajusta cada vez que cambia el dominio, por lo que el mismo color indica un recuento de casos diferente para distintos dominios seleccionados.</li>
+                </ul>
+                </div>
+                """
+            )
     
         with ui.card(full_screen=True):
             ui.card_header("Mapa de dominio seleccionado por municipio")
@@ -545,17 +569,23 @@ with ui.nav_panel("Mapa de dominios (Municipios)"), ui.layout_columns(col_widths
                 # municipios sin casos del dominio seleccionado -> 0, no "sin datos"
                 selected_gdf["DOMINIO_TOTAL"] = selected_gdf["DOMINIO_TOTAL"].fillna(0)
 
-
                 # Mapa coropleta por municipio (with leaflet, numeric cloropeth)
                 # leaflet needs WGS84 lon/lat, but our geodata is already in that CRS (EPSG:4326), so we can use it directly
                 # We need to convert the geodataframe to GeoJSON format for use in leaflet                
                 selected_gdf_json = json.loads(selected_gdf.to_json())
-
-                # continuous colormap over 0 -> max (per-domain rescaling)
                 
-                vmax = float(selected_gdf["DOMINIO_TOTAL"].max())
-                cmap = linear.YlOrRd_04.scale(0, vmax)
-                cmap.caption = f"Casos de {dominio_sel}"
+                # Quartile breakpoints (0%, 25%, 50%, 75%, 100%)
+                values = selected_gdf["DOMINIO_TOTAL"].dropna()
+                breaks = np.quantile(values, [0, 0.25, 0.5, 0.75, 1.0]).tolist()
+                breaks = sorted(set(breaks))  # safety net in case of ties at low counts
+                
+                cmap = StepColormap(
+                    colors=["#ffffb2", "#fecc5c", "#fd8d3c", "#f03b20", "#bd0026"],
+                    index=breaks,
+                    vmin=breaks[0],
+                    vmax=breaks[-1],
+                    caption=f"Casos de {dominio_sel} (cuartiles)"
+                )
                 
                 # numeric fill
                 def style_callback(feature):
@@ -574,23 +604,19 @@ with ui.nav_panel("Mapa de dominios (Municipios)"), ui.layout_columns(col_widths
                     hover_style={"weight": 1.2, "color": "black"}, # hovered municipality outlines itself 
                 )
 
-
                 #Check https://ipyleaflet.readthedocs.io/en/latest/layers/choropleth.html
-                
-                 
-                # centre on the data extent
-                minx, miny, maxx, maxy = selected_gdf.total_bounds
-                center = ((miny + maxy) / 2, (minx + maxx) / 2)   # (lat, lon)
-
                 m = Map(
-                    # Unnecessary once you call fit_bounds()
-                    #center=center,  
-                    #zoom=6,
                     basemap=basemaps.CartoDB.Positron, 
                     scroll_wheel_zoom=True)
                 m.add(layer)
 
+                # centre on the data extent
+                minx, miny, maxx, maxy = selected_gdf.total_bounds
                 m.fit_bounds([[miny, minx], [maxy, maxx]])
+
+                legend = HTML(cmap._repr_html_())
+                legend.layout.margin = "0 0 0 0"
+                m.add(WidgetControl(widget=legend, position="bottomright"))
 
                 # floating info box on the map
                 info = HTML("Pasa el ratón sobre un municipio")
@@ -615,36 +641,38 @@ with ui.nav_panel("Mapa de dominios (Municipios)"), ui.layout_columns(col_widths
 #
 ################################################
 
-with ui.nav_panel("Metodología"):
-      with ui.card(full_screen=True):
-        ui.markdown("""
-        **NANDA**: Datos originales (códigos NANDA por paciente) se procesan a partir de un único fichero `CSV`. Como máximo hay seis
+with ui.nav_panel("Metodología"), ui.card(full_screen=True):
+
+    ui.HTML(
+        """
+        <div style="font-size: 0.85em; color: #666;">
+        <b>NANDA</b>: Datos originales (códigos NANDA por paciente) se procesan a partir de un único fichero `CSV`. Como máximo hay seis
         incidencias por participantes a lo largo del periodo de estudio (2018-2023). Si la fecha de inicio 
         o de fin es nula, entonces se asigna el primer día (1-1-2018) o último día del periodo (31-12-2023), respectivamente.  
         Según las fechas de incidencia, se asigna a un grupo: Pre-pandemia (2018-2019), intra-pandemia (2020-2021), post-pandemia (2022-2023).
 
         Posteriormente, se integra el fichero NANDA con el fichero de correlación entre dominios-clases NANDA 
-        y códigos NANDA. Fichero de salida en formato `.parquet`.
-        
-        <small>
-        *Issues*: 
+        y códigos NANDA. Fichero de salida en formato .parquet.
+        <p>
+        <em>Issues</em>: 
+        <ul>
+        <li>No hay correspondencia de dominios-clases NANDA para los participantes de Barcelona y Lleida. Puede ser que los códigos
+        NANDA para esos participantes no estén presentes en el fichero de correlaciones.</li>
+        </ul>
 
-        - No hay correspondencia de dominios-clases NANDA para los participantes de Barcelona y Lleida. Puede ser que los códigos
-        NANDA para esos participantes no estén presentes en el fichero de correlaciones.
-        </small>
+        <b>POBLACIÓN</b>: Datos originales se procesan a partir de un único fichero .DSV. Cada fila es un participante y sus datos asociados.
+        Se remplaza el código CCAA por su respectivo por INE y se añade el código INE de municipio segun el código 
+        postal del participante. 
+        <p>
 
-        ---
-
-        **POBLACIÓN**: Datos originales se procesan a partir de un único fichero `.DSV`. Cada fila es un participante y sus datos asociados.
-
-        <small>
-        *Issues*: 
-
-        - Participantes de Navarra no tienen identificador de Áreas de Salud (AS). **No es posible 'Dominio prevalente por AS'** 
-        - Participantes de Vizcaya no tienen código postal y todos pertenecen a la misma AS. **No es posible 'Dominio prevalente por municipio'**
-        <small>
-
-        """)
+        <em>Issues</em>: 
+        <ul>
+        <li>Participantes de Navarra no tienen identificador de Áreas de Salud (AS). 'No es posible 'Dominio prevalente por AS'</li> 
+        <li>Participantes de Vizcaya no tienen código postal y todos pertenecen a la misma AS. No es posible 'Dominio prevalente por municipio'</li>
+        </ul>
+        </div>
+        """
+    )
 
 
 ################################################

@@ -43,6 +43,31 @@ def plotly_heatmap_dominios(
     cmap: str = "YlOrRd",
     log_scale: bool = True):
 
+    if df is None or df.is_empty():
+        # Create an empty px.imshow with a "no data" message
+        fig = px.imshow(
+            [[0]],
+            color_continuous_scale=cmap,
+            aspect="auto",
+        )
+        fig.update_traces(
+            hoverinfo="skip",
+        )
+        fig.update_layout(
+            xaxis={"visible": False},
+            yaxis={"visible": False},
+            annotations=[
+                {
+                    "text": "Sin datos disponibles",
+                    "xref": "paper", "yref": "paper",
+                    "x": 0.5, "y": 0.5,
+                    "showarrow": False,
+                    "font": {"size": 16, "color": "gray"},
+                }
+            ],
+        )
+        return fig
+
     # Separate labels and numeric data
     # issue is that empty strings or nulls (no muni desc) cause misaligned or broken labels. 
     # Replace them with a placeholder:
