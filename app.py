@@ -1,48 +1,47 @@
 import os
+
 os.environ["POLARS_UNKNOWN_EXTENSION_TYPE_BEHAVIOR"] = "load_as_storage"
 
 #import geopandas as gpd
 #import pyarrow
-import polars as pl 
+import json
 
-from plots import (
-    plotly_heatmap_dominios, 
-    plotly_donut_clases,
-    CONTEXT_PALETTE
+import polars as pl
+from branca.colormap import linear
+from ipyleaflet import GeoJSON, Map, WidgetControl, basemaps
+from ipywidgets import HTML
+from plotnine import (
+    aes,
+    coord_fixed,
+    geom_map,
+    #geom_text,
+    ggplot,
+    labs,
+    scale_fill_manual,  #, scale_fill_brewer)
 )
+from shiny import reactive
+from shiny.express import input, render, ui
+from shinywidgets import render_plotly, render_widget
 
 # Load data and compute static values/constants that will be used in the app
 from data import (
-    ICONS, 
     BASE_THEME_VOID,
-    THEME_LEGEND_BOTTOM,
-    MASTER_COLORMAP_DOMINIO, MASTER_COLORMAP_CLASES, COLOR_NA, 
-    municipios,
+    COLOR_NA,
+    ICONS,
+    MASTER_COLORMAP_CLASES,
+    MASTER_COLORMAP_DOMINIO,
+    #THEME_LEGEND_BOTTOM,
     areas_salud,
+    municipios,
     nanda_periodos,
-    participantes
+    participantes,
 )
-
-from plotnine import (
-    ggplot, geom_map, geom_text, 
-    coord_fixed, aes, labs,
-    scale_fill_manual)#, scale_fill_brewer)
-
-from shiny import reactive
-from shiny.express import input, ui, render
-from shinywidgets import render_plotly, render_widget
-from ipyleaflet import Map, GeoJSON, WidgetControl, Choropleth, basemaps
-from ipywidgets import HTML
-
-import json
-
-from branca.colormap import linear
+from plots import CONTEXT_PALETTE, plotly_donut_clases, plotly_heatmap_dominios
 
 #param_periodo = "PRE-PANDEMIA"  # "INTRA-PANDEMIA, "POST-PANDENIA"
 
 # Add page title and sidebar inputs
 ui.page_opts(title = "Cuidamos +75", fillable = True)
-
 
 with ui.sidebar():
     ui.markdown(
@@ -92,8 +91,8 @@ with ui.nav_panel("Contexto"):
                         pl.col("PERIODO_TIPO") == selected_periodo,
                         pl.col("TIENE_PERIODO")
                     )
-                    .select(pl.col("PACIENTE_ID").n_unique().alias("n"))
-                    .to_dicts()[0]["n"] # pull the value
+                    .select(pl.col("PACIENTE_ID").n_unique())
+                    .item() # pull the value when one row/one column
                 )
                 return f"{total_por_periodo:,} - {total_por_ccaa:,}"
 
@@ -109,46 +108,43 @@ with ui.nav_panel("Contexto"):
             def total_areas_salud():
                 return areas_salud_data().shape[0]
     
-    with ui.layout_columns(fillable=True):
-        with ui.card(full_screen=True):
-            ui.card_header("Municipios y áreas de salud")
-            
-            @render.plot
-            def plot_municipios_as():
+    with ui.layout_columns(fillable=True), ui.card(full_screen=True):
+        ui.card_header("Municipios y áreas de salud")
+        
+        @render.plot
+        def plot_municipios_as():
 
-                return (
-                    ggplot()
-                    
-                    + geom_map(
-                        data=areas_salud_data(),
-                        mapping=aes(fill="AS_DESC"),
-                        color="black",
-                        alpha=0.3,
-                        size=0.2,
-                        show_legend=True
-                    )
-                    + geom_map(
-                        data=municipios_data(),
-                        color="#cccccc",
-                        fill=None,
-                        size=0.2
-                    )
-                    #+ scale_fill_brewer(
-                    #    type="qual", palette="Paired", na_value=COLOR_NA)
-                    + scale_fill_manual(CONTEXT_PALETTE, na_value=COLOR_NA)
-                    + labs(fill="Áreas de salud")
-                    + coord_fixed(ratio=1, expand=True)
-                    + BASE_THEME_VOID
+            return (
+                ggplot()
+                
+                + geom_map(
+                    data=areas_salud_data(),
+                    mapping=aes(fill="AS_DESC"),
+                    color="black",
+                    alpha=0.3,
+                    size=0.2,
+                    show_legend=True
                 )
+                + geom_map(
+                    data=municipios_data(),
+                    color="#cccccc",
+                    fill=None,
+                    size=0.2
+                )
+                #+ scale_fill_brewer(
+                #    type="qual", palette="Paired", na_value=COLOR_NA)
+                + scale_fill_manual(CONTEXT_PALETTE, na_value=COLOR_NA)
+                + labs(fill="Áreas de salud")
+                + coord_fixed(ratio=1, expand=True)
+                + BASE_THEME_VOID
+            )
 
 ################################################
 #
 # Dominio prevalente (Áreas de salud)
 #
 ################################################
-with ui.nav_panel("Dominio prevalente (Áreas de salud)"):
-
-    with ui.layout_columns(col_widths=(7, 5)):
+with ui.nav_panel("Dominio prevalente (Áreas de salud)"), ui.layout_columns(col_widths=(7, 5)):
 
         ##### PANEL IZQUIERDO
         with ui.card(full_screen=True):
@@ -324,9 +320,7 @@ with ui.nav_panel("Dominio prevalente (Áreas de salud)"):
 #
 ################################################
 
-with ui.nav_panel("Dominio prevalente (Municipios)"):
-
-    with ui.layout_columns(col_widths=(7, 5)):
+with ui.nav_panel("Dominio prevalente (Municipios)"), ui.layout_columns(col_widths=(7, 5)):
         ##### PANEL IZQUIERDO
         with ui.card(full_screen=True):    
             with ui.card_header():
@@ -493,9 +487,7 @@ with ui.nav_panel("Dominio prevalente (Municipios)"):
 #
 ################################################
 
-with ui.nav_panel("Mapa de dominios (Municipios)"):
-
-    with ui.layout_columns(col_widths=(4, 8)):
+with ui.nav_panel("Mapa de dominios (Municipios)"), ui.layout_columns(col_widths=(4, 8)):
         with ui.card(full_screen=True):
             ui.card_header("Selección de dominios")
 
@@ -591,8 +583,9 @@ with ui.nav_panel("Mapa de dominios (Municipios)"):
                 center = ((miny + maxy) / 2, (minx + maxx) / 2)   # (lat, lon)
 
                 m = Map(
-                    center=center,
-                    zoom=6,
+                    # Unnecessary once you call fit_bounds()
+                    #center=center,  
+                    #zoom=6,
                     basemap=basemaps.CartoDB.Positron, 
                     scroll_wheel_zoom=True)
                 m.add(layer)
@@ -616,6 +609,42 @@ with ui.nav_panel("Mapa de dominios (Municipios)"):
                 return m
 
 
+################################################
+#
+# Notas metodologícas
+#
+################################################
+
+with ui.nav_panel("Metodología"):
+      with ui.card(full_screen=True):
+        ui.markdown("""
+        **NANDA**: Datos originales (códigos NANDA por paciente) se procesan a partir de un único fichero `CSV`. Como máximo hay seis
+        incidencias por participantes a lo largo del periodo de estudio (2018-2023). Si la fecha de inicio 
+        o de fin es nula, entonces se asigna el primer día (1-1-2018) o último día del periodo (31-12-2023), respectivamente.  
+        Según las fechas de incidencia, se asigna a un grupo: Pre-pandemia (2018-2019), intra-pandemia (2020-2021), post-pandemia (2022-2023).
+
+        Posteriormente, se integra el fichero NANDA con el fichero de correlación entre dominios-clases NANDA 
+        y códigos NANDA. Fichero de salida en formato `.parquet`.
+        
+        <small>
+        *Issues*: 
+
+        - No hay correspondencia de dominios-clases NANDA para los participantes de Barcelona y Lleida. Puede ser que los códigos
+        NANDA para esos participantes no estén presentes en el fichero de correlaciones.
+        </small>
+
+        ---
+
+        **POBLACIÓN**: Datos originales se procesan a partir de un único fichero `.DSV`. Cada fila es un participante y sus datos asociados.
+
+        <small>
+        *Issues*: 
+
+        - Participantes de Navarra no tienen identificador de Áreas de Salud (AS). **No es posible 'Dominio prevalente por AS'** 
+        - Participantes de Vizcaya no tienen código postal y todos pertenecen a la misma AS. **No es posible 'Dominio prevalente por municipio'**
+        <small>
+
+        """)
 
 
 ################################################

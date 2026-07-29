@@ -1,7 +1,6 @@
-import polars as pl 
-from polars import selectors as cs
-
 import plotly.express as px
+import polars as pl
+from polars import selectors as cs
 from pypalettes import load_palette
 
 # https://plotly.com/python/discrete-color/
@@ -9,7 +8,7 @@ COLOR_PALETTE = px.colors.qualitative.Dark24
 
 # https://pypi.org/project/pypalettes/
 # Python Color Palette Finder: https://python-graph-gallery.com/color-palette-finder/
-CONTEXT_PALETTE = load_palette("Autumn", repeat=3)
+CONTEXT_PALETTE = load_palette("Autumn", repeat=5)
 
 def get_domain_colormap(df: pl.DataFrame, domain_col: str = "DOMINIO") -> dict:
     """
@@ -85,9 +84,9 @@ def plotly_heatmap_dominios(
     )
 
     fig.update_layout(
-        xaxis=dict(tickangle=45, tickfont_size=8, side="bottom"),
-        yaxis=dict(tickfont_size=8, autorange="reversed"),  # top-to-bottom row order
-        coloraxis_colorbar=dict(title_side="right")
+        xaxis={"tickangle": 45, "tickfont_size": 8, "side": "bottom"},
+        yaxis={"tickfont_size": 8, "autorange": "reversed"},  # top-to-bottom row order
+        coloraxis_colorbar={"title_side": "right"}
         #margin=dict(l=120, r=40, t=40, b=120),
     )
 
@@ -104,9 +103,9 @@ def plotly_donut_clases(
     if df is None or df.is_empty():
         fig = px.pie(names=[], values=[], hole=0.55)
         fig.update_layout(
-            annotations=[dict(text=f"Haz clic en {message} <br>para ver la(s) clase(s) por dominio prevalente",
-            x=0.5, y=0.5, showarrow=False, font=dict(size=13))],
-            margin=dict(t=30, b=10, l=10, r=10),
+            annotations=[{"text": f"Haz clic en {message} <br>para ver la(s) clase(s) por dominio prevalente",
+            "x": 0.5, "y": 0.5, "showarrow": False, "font": {"size": 13}}],
+            margin={"t": 30, "b": 10, "l": 10, "r": 10},
         )
         return fig
     
@@ -129,8 +128,8 @@ def plotly_donut_clases(
     fig.update_layout(
         showlegend=False,            # labels are on the slices; legend is redundant
         #margin=dict(t=40, b=10, l=10, r=10),
-        annotations=[dict(text=f"{int(df[var_numeric].sum())}<br>casos",
-                        x=0.5, y=0.5, showarrow=False, font=dict(size=15))],
+        annotations=[{"text": f"{int(df[var_numeric].sum())}<br>casos",
+                        "x": 0.5, "y": 0.5, "showarrow": False, "font": {"size": 15}}],
     )
     return fig
 
