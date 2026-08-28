@@ -55,7 +55,7 @@ with ui.sidebar():
     ui.input_radio_buttons(  
         id = "param_ccaa",  
         label = "Región o provincia:",  
-        choices ={"14": "Murcia", "15": "Navarra"},
+        choices ={"05": "Canarias", "13": "Madrid", "14": "Murcia", "15": "Navarra"},
         #choices ={"14": "Murcia"},
         inline = False
     )  
@@ -202,7 +202,7 @@ with ui.nav_panel("Dominio prevalente (Áreas de salud)"), ui.layout_columns(col
                         m = Map(
                             center=(40.4168, -3.7038),  # Madrid, roughly centered on Spain
                             zoom=5,
-                            basemap=basemaps.CartoDB.Positron,
+                            basemap=basemaps.OpenStreetMap.Mapnik,
                             scroll_wheel_zoom=True,
                         )
                         info = HTML("Sin datos disponibles para esta selección")
@@ -240,7 +240,7 @@ with ui.nav_panel("Dominio prevalente (Áreas de salud)"), ui.layout_columns(col
                     m = Map(
                         center=center,
                         zoom=8,
-                        basemap=basemaps.CartoDB.Positron, 
+                        basemap=basemaps.OpenStreetMap.Mapnik, #basemaps.CartoDB.Positron, 
                         scroll_wheel_zoom=True)
                     m.add(layer)
 
@@ -434,7 +434,7 @@ with ui.nav_panel("Dominio prevalente (Municipios)"), ui.layout_columns(col_widt
                     m = Map(
                         center=center,
                         zoom=8,
-                        basemap=basemaps.CartoDB.Positron, 
+                        basemap=basemaps.OpenStreetMap.Mapnik, #basemaps.CartoDB.Positron, 
                         scroll_wheel_zoom=True)
                     m.add(layer)
 
@@ -538,6 +538,7 @@ with ui.nav_panel("Mapa de dominios (Municipios)"), ui.layout_columns(col_widths
                 <ul>
                 <li>Los municipios sin casos se tratan como 0 casos, por lo que no hay diferencia entre "no se han recopilado datos aquí" y "cero casos".</li>
                 <li>La escala de color se reajusta cada vez que cambia el dominio, por lo que el mismo color indica un recuento de casos diferente para distintos dominios seleccionados.</li>
+                <li>La leyenda muestra la distribución por cuartiles (cuatro colores - 0%, 25%, 50%, 75%, 100%) del dominio seleccionado por municipio. El valor número de la leyenda corresponde al número de casos por municipio del dominio seleccionado.</li>
                 </ul>
                 </div>
                 """
@@ -606,7 +607,7 @@ with ui.nav_panel("Mapa de dominios (Municipios)"), ui.layout_columns(col_widths
 
                 #Check https://ipyleaflet.readthedocs.io/en/latest/layers/choropleth.html
                 m = Map(
-                    basemap=basemaps.CartoDB.Positron, 
+                    basemap=basemaps.OpenStreetMap.Mapnik, #basemaps.CartoDB.Positron, 
                     scroll_wheel_zoom=True)
                 m.add(layer)
 
@@ -650,25 +651,30 @@ with ui.nav_panel("Metodología"), ui.card(full_screen=True):
         incidencias por participantes a lo largo del periodo de estudio (2018-2023). Si la fecha de inicio 
         o de fin es nula, entonces se asigna el primer día (1-1-2018) o último día del periodo (31-12-2023), respectivamente.  
         Según las fechas de incidencia, se asigna a un grupo: Pre-pandemia (2018-2019), intra-pandemia (2020-2021), post-pandemia (2022-2023).
-
         Posteriormente, se integra el fichero NANDA con el fichero de correlación entre dominios-clases NANDA 
         y códigos NANDA. Fichero de salida en formato .parquet.
+        
         <p>
-        <em>Issues</em>: 
+        <em>Notas</em>: 
         <ul>
         <li>No hay correspondencia de dominios-clases NANDA para los participantes de Barcelona y Lleida. Puede ser que los códigos
-        NANDA para esos participantes no estén presentes en el fichero de correlaciones.</li>
+        NANDA para esos participantes no estén presentes en el fichero de correlaciones actual.</li>
         </ul>
 
         <b>POBLACIÓN</b>: Datos originales se procesan a partir de un único fichero .DSV. Cada fila es un participante y sus datos asociados.
-        Se remplaza el código CCAA por su respectivo por INE y se añade el código INE de municipio segun el código 
-        postal del participante. 
-        <p>
+        Se remplaza el código CCAA por su correspondiente código INE y se añade el código INE de municipio según el código 
+        postal del participante (no siempre hay correspondencia). 
 
-        <em>Issues</em>: 
+        <p><p>
+        Se incluyen: Murcia, Navarra, Canarias y Madrid.
+        Se excluyen: Barcelona y Lleida (no tienen correspondencia NANDA); Mallorca (sin CP de participantes), Pais Vasco (sin CP de participantes).
+        
+        <p>
+        <em>Notas</em>: 
         <ul>
-        <li>Participantes de Navarra no tienen identificador de Áreas de Salud (AS). 'No es posible 'Dominio prevalente por AS'</li> 
-        <li>Participantes de Vizcaya no tienen código postal y todos pertenecen a la misma AS. No es posible 'Dominio prevalente por municipio'</li>
+        <li>Participantes de Navarra no tienen identificador de Áreas de Salud (AS). No es posible 'Dominio prevalente por AS', solo por municipio</li> 
+        <li>Participantes de Vizcaya no tienen código postal y todos pertenecen a la misma AS (provincia Vizcaya)</li>
+        <li>Participantes de Mallorca no tienen código postal</li>
         </ul>
         </div>
         """
