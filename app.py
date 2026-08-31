@@ -11,15 +11,6 @@ import polars as pl
 from branca.colormap import StepColormap, linear
 from ipyleaflet import GeoJSON, Map, WidgetControl, basemaps
 from ipywidgets import HTML
-from plotnine import (
-    aes,
-    coord_fixed,
-    geom_map,
-    #geom_text,
-    ggplot,
-    labs,
-    scale_fill_manual,  #, scale_fill_brewer)
-)
 from shiny import reactive
 from shiny.express import input, render, ui
 from shinywidgets import render_plotly, render_widget
@@ -33,11 +24,20 @@ from data import (
     MASTER_COLORMAP_DOMINIO,
     #THEME_LEGEND_BOTTOM,
     areas_salud,
+    ineatlas,
     municipios,
     nanda_periodos,
     participantes,
 )
-from plots import CONTEXT_PALETTE, plotly_donut_clases, plotly_heatmap_dominios
+from plots import (
+    CONTEXT_PALETTE,
+    p9_ineatlas_mean_age,
+    p9_ineatlas_over65,
+    p9_ineatlas_pop,
+    p9_ineatlas_pop_density,
+    plotly_donut_clases,
+    plotly_heatmap_dominios,
+)
 
 #param_periodo = "PRE-PANDEMIA"  # "INTRA-PANDEMIA, "POST-PANDENIA"
 
@@ -111,37 +111,78 @@ with ui.nav_panel("Contexto"):
             def total_areas_salud():
                 return areas_salud_data().shape[0]
     
-    with ui.layout_columns(fillable=True), ui.card(full_screen=True):
-        ui.card_header("Municipios y áreas de salud")
-        
-        @render.plot
-        def plot_municipios_as():
+    with ui.layout_columns(col_widths=(4, 8)): 
+        with ui.card(full_screen=True):
+            ui.card_header("Selección de variable demográfica")
+            
+            ui.input_select(  
+                id = "param_demografia",  
+                label = "Variable:",  
+                choices = {
+                    "A": "Edad media, años (2023)",
+                    "B": "Población total (2023)",
+                    "C": "Densidad población (2023)",
+                    "D": "Población mayor de 65 años, % (2023)"    
+                },
+                selected = "A"
+            )  
 
-            return (
-                ggplot()
-                
-                + geom_map(
-                    data=areas_salud_data(),
-                    mapping=aes(fill="AS_DESC"),
-                    color="black",
-                    alpha=0.3,
-                    size=0.2,
-                    show_legend=True
-                )
-                + geom_map(
-                    data=municipios_data(),
-                    color="#cccccc",
-                    fill=None,
-                    size=0.2
-                )
-                #+ scale_fill_brewer(
-                #    type="qual", palette="Paired", na_value=COLOR_NA)
-                + scale_fill_manual(CONTEXT_PALETTE, na_value=COLOR_NA)
-                + labs(fill="Áreas de salud")
-                + coord_fixed(ratio=1, expand=True)
-                + BASE_THEME_VOID
+            ui.HTML(
+                """
+                <div style="font-size: 0.85em; color: #666;">
+                <em>Nota metodológica</em>.
+                <ul>
+                <li>Mediana nacional de edida media = 48.2 años. Rojo = más envejecido.</li>
+                <li>Mediana nacional de desnsidad población = 16.3 hab/km2. Color oscuro = mayor densidad.</li>
+                <li>OMS referencia = 20% (super-aged society). Rojo = más envejecido.</li>
+                </ul>
+                </div>
+                """
             )
+        
+        
+        
+        with ui.card(full_screen=True):
+            with ui.card_header():
+                @render.ui
+                def ineAtlas_header():
+                    demografia_sel = input.param_demografia()
 
+                    match demografia_sel:
+                        case "A":
+                            return ui.HTML("Edad media en los municipios seleccionados, 2023")
+                            
+                        case "B":
+                            return ui.HTML("Población en los municipios seleccionados, 2023")
+
+                        case "C":
+                            return ui.HTML("Densida de pooblación en los municipios seleccionados, 2023")
+
+                        case "D":
+                            return ui.HTML("Porcentaje de población de 65+ en los municipios seleccionados, 2023")
+        
+            @render.plot
+            def plot_ineatlas():
+
+                demografia_sel = input.param_demografia()
+
+                gdf_demographics = ineatlas_data()
+                
+                match demografia_sel:
+                    case "A":
+                        return p9_ineatlas_mean_age(gdf_demographics, COLOR_NA, BASE_THEME_VOID)
+                        
+                    case "B":
+                        return p9_ineatlas_pop(gdf_demographics, COLOR_NA, BASE_THEME_VOID)
+
+                    case "C":
+                        return p9_ineatlas_pop_density(gdf_demographics, COLOR_NA, BASE_THEME_VOID)
+
+                    case "D":
+                        return p9_ineatlas_over65(gdf_demographics, COLOR_NA, BASE_THEME_VOID)
+
+            ui.card_footer("Fuente: INE, Atlas de Distribución de Renta de los Hogares (ineAtlas)")
+       
 ################################################
 #
 # Dominio prevalente (Áreas de salud)
@@ -709,6 +750,15 @@ def municipios_data():
 def areas_salud_data():
     selected_ccaa = input.param_ccaa()
     return areas_salud.loc[areas_salud["CCAA_CODINE"] == selected_ccaa]
+
+@reactive.calc
+def ineatlas_data():
+    selected_ccaa = input.param_ccaa()
+    if selected_ccaa == "05": # Canarias
+        return ineatlas.loc[ineatlas["codauto"] == selected_ccaa].to_crs(25828)  # ETRS89 / UTM 28N — projected, in meters
+    else:
+        return ineatlas.loc[ineatlas["codauto"] == selected_ccaa].to_crs(25830)  # ETRS89 / UTM 30N — projected, in meters
+
 
 def participantes_data() -> str:
     pass

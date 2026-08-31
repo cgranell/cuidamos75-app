@@ -13,6 +13,7 @@ AS_FILE = app_path / "products" / "as.parquet"
 MUNICIPIOS_FILE = app_path / "products" / "municipios.parquet"
 NANDA_PERIODOS_FILE = app_path / "products" / "nanda_periodos.parquet"
 POBLACION_FILE = app_path / "products" / "poblacion.parquet"
+INEATLAS_FILE = app_path / "products" / "ineAtlas_demographics_mun.parquet"
 
 CRC_PROJECTED = "EPSG:3857" # Web Mercator
 CRC_SPHERICAL = "EPSG:4326" # WGS84: lat/lon values
@@ -34,7 +35,7 @@ BASE_THEME_VOID = (
         legend_title=element_text(size=8),
         legend_text=element_text(size=7),
         #figure_size=(10, 7),
-        aspect_ratio=1
+        #aspect_ratio=1
     )
 )
 
@@ -50,6 +51,23 @@ THEME_LEGEND_BOTTOM = (
 )
 
 # Data preparation functions
+
+def geodata_ineatlas() -> gpd.GeoDataFrame:
+    """
+    Carga un GeoDataFrame de ineAtlas.
+    """
+    df = (
+        pl.scan_parquet(INEATLAS_FILE)
+        .collect()
+    ).to_pandas()
+
+    # Descodifica columna geometry (almacenada en WKB) para uso en gpd
+    df["geometry"] = df["geometry"].apply(lambda x: wkb.loads(x))
+    gdf = gpd.GeoDataFrame(df, geometry="geometry", crs=4258)  # ETRS89, matches source
+    
+    return gdf
+
+
 def geodata_municipios() -> gpd.GeoDataFrame:
     """
     Carga un GeoDataFrame de municipios.
@@ -119,6 +137,7 @@ municipios = geodata_municipios()
 areas_salud = geodata_areas_salud()
 nanda_periodos = nanda_periodos_data()
 participantes = participantes_data()
+ineatlas = geodata_ineatlas()
 
 
 # Build once from your base data (not filtered) so colors are stable

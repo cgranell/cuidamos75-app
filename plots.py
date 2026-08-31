@@ -1,5 +1,18 @@
+import geopandas as gpd
+import numpy as np
+import pandas as pd
 import plotly.express as px
 import polars as pl
+from plotnine import (
+    aes,
+    coord_fixed,
+    geom_map,
+    #geom_text,
+    ggplot,
+    labs,
+    scale_fill_brewer,
+    scale_fill_manual,
+)
 from polars import selectors as cs
 from pypalettes import load_palette
 
@@ -158,8 +171,179 @@ def plotly_donut_clases(
     )
     return fig
 
+
+def fermenter_labels(breaks, fmt="{:,.0f}"):
+    """
+    Build scale_fill_fermenter-style range labels for N breaks -> N+1 bins,
+    matching the ±Inf outer-bin convention.
+    """
+    formatted = [fmt.format(b) for b in breaks]
+    labels = [f"< {formatted[0]}"]
+    labels += [f"{formatted[i]}–{formatted[i+1]}" for i in range(len(formatted) - 1)]
+    labels.append(f"> {formatted[-1]}")
+    return labels
+
+def p9_ineatlas_mean_age(
+    gdf: gpd.GeoDataFrame,
+    color_na: str,
+    base_theme: str):
+
+    median_age = 48.2
+    gap_in_years = 2
+    bins = median_age + gap_in_years * np.arange(-3, 4) 
+    # pd.cut() treats the bin edges as hard limits, 
+    # anything outside [min(bins), max(bins)] gets NaN, which then renders as na_value
+    bin_edges = np.concatenate(([-np.inf], bins, [np.inf]))  # 9 edges -> 8 bins
+    age_labels = fermenter_labels(bins, fmt="{:,.1f}")
     
-                
+    # plotnine has no scale_fill_fermenter equivalent, so bin mean_age manually
+    # to reproduce the same discrete/binned legend behavior
+    gdf["mean_age_bin"] = pd.cut(
+        gdf["mean_age"],
+        bins=bin_edges,           # same numeric breakpoints as your R `bins` vector
+        labels=age_labels,
+        include_lowest=True,
+    )
+
+    return (
+        ggplot()
+        
+        + geom_map(
+            data=gdf,
+            mapping=aes(fill="mean_age_bin"),
+            color="none")
+        + scale_fill_brewer(
+            type="div",
+            palette="RdBu",
+            direction=-1,        # red = older, blue = younger
+            name="Edad media (años)",
+            na_value=color_na,
+        )
+
+        + coord_fixed(ratio=1, expand=True)
+        + base_theme
+    )
+
+
+
+
+def p9_ineatlas_pop(
+    gdf: gpd.GeoDataFrame,
+    color_na: str,
+    base_theme: str):
+
+    bins = np.array([500, 1000, 5000, 10000, 50000, 100000])  # 6 breaks -> 7 bins
+    bin_edges = np.concatenate(([-np.inf], np.log10(bins), [np.inf]))
+
+    population_log = np.log10(gdf["population"])
+    pop_labels = fermenter_labels(bins, fmt="{:,.0f}")
+
+    gdf["population_bin"] = pd.cut(
+        population_log,
+        bins=bin_edges,
+        labels=pop_labels,
+        include_lowest=True,
+    )
+
+    return (
+        ggplot()
+        
+        + geom_map(
+            data=gdf,
+            mapping=aes(fill="population_bin"),
+            color="none")
+        + scale_fill_brewer(
+            type="seq",
+            palette="YlGnBu",
+            direction=1,        #  # dark = more populated
+            name="Población",
+            na_value=color_na,
+        )
+
+        + coord_fixed(ratio=1, expand=True)
+        + base_theme
+    )
+
+
+def p9_ineatlas_pop_density(
+    gdf: gpd.GeoDataFrame,
+    color_na: str,
+    base_theme: str):
+
+    # 6 breaks -> 7 bins, log-spaced round numbers
+    bins = np.array([10, 50, 100, 500, 1000, 5000])  # 6 breaks -> 7 bins
+    bin_edges = np.concatenate(([-np.inf], np.log10(bins), [np.inf]))
+
+    pop_density_log = np.log10(gdf["pop_density"])
+    pop__density_labels = fermenter_labels(bins, fmt="{:,.0f}")
+
+    gdf["pop_density_bin"] = pd.cut(
+        pop_density_log,
+        bins=bin_edges,
+        labels=pop__density_labels,
+        include_lowest=True,
+    )
+
+    return (
+        ggplot()
+        
+        + geom_map(
+            data=gdf,
+            mapping=aes(fill="pop_density_bin"),
+            color="none")
+        + scale_fill_brewer(
+            type="seq",
+            palette="YlGnBu",
+            direction=1,        #  # dark = more populated
+            name="Densidad de población\n(hab/km²)",
+            na_value=color_na,
+        )
+
+        + coord_fixed(ratio=1, expand=True)
+        + base_theme
+    )
+
+def p9_ineatlas_over65(
+    gdf: gpd.GeoDataFrame,
+    color_na: str,
+    base_theme: str):
+
+    ref = 20  # national share of 65+, or weighted.mean(demographics_mun$pct_over65, w = demographics_mun$population)
+
+    # 6 breaks -> 7 bins, 
+    bins = ref + np.array([-15, -10, -5, 0, 5, 10, 15])
+    bin_edges = np.concatenate(([-np.inf], bins, [np.inf]))  # 9 edges -> 8 bins
+    over65_labels = fermenter_labels(bins, fmt="{:,.0f}")
+    
+    # plotnine has no scale_fill_fermenter equivalent, so bin mean_age manually
+    # to reproduce the same discrete/binned legend behavior
+    gdf["pct_over65_bin"] = pd.cut(
+        gdf["pct_over65"],
+        bins=bin_edges, 
+        labels=over65_labels,
+        include_lowest=True,
+    )
+
+    return (
+        ggplot()
+        
+        + geom_map(
+            data=gdf,
+            mapping=aes(fill="pct_over65_bin"),
+            color="none")
+        + scale_fill_brewer(
+            type="div",
+            palette="RdBu",
+            direction=-1,        # red = older, blue = younger
+            name="Población de 65+ (%)",
+            na_value=color_na,
+        )
+
+        + coord_fixed(ratio=1, expand=True)
+        + base_theme
+    )
+
+
 """
 def leaflet_map_dominio_prevalente(
     gdf: gpd.GeoDataFrame,
