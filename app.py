@@ -45,12 +45,14 @@ from plots import (
 ui.page_opts(title = "Cuidamos +75", fillable = True)
 
 with ui.sidebar():
-    ui.markdown(
-            """
-            Prototipo de visualización de datos de prevalencia de diagnósticos NANDA en personas mayores de 75 años, basado en datos del proyecto [Cuidamos+75](https://cuidamos75.com/).
-            
-            ---
-            """     
+    
+    ui.HTML(
+        """
+        <div style="font-size: 0.85em; color: #666;">
+        Prototipo de visualización de datos de prevalencia de diagnósticos NANDA en personas mayores de 75 años, 
+        basado en datos del proyecto <a href="https://cuidamos75.com/">Cuidamos+75</a>.
+        </div>
+        """     
         )
     ui.input_radio_buttons(  
         id = "param_ccaa",  
@@ -132,8 +134,8 @@ with ui.nav_panel("Contexto"):
                 <div style="font-size: 0.85em; color: #666;">
                 <em>Nota metodológica</em>.
                 <ul>
-                <li>Mediana nacional de edida media = 48.2 años. Rojo = más envejecido.</li>
-                <li>Mediana nacional de desnsidad población = 16.3 hab/km2. Color oscuro = mayor densidad.</li>
+                <li>Mediana nacional de edad media = 48.2 años. Rojo = más envejecido.</li>
+                <li>Mediana nacional de densidad población = 16.3 hab/km2. Color oscuro = mayor densidad.</li>
                 <li>OMS referencia = 20% (super-aged society). Rojo = más envejecido.</li>
                 </ul>
                 </div>
@@ -156,7 +158,7 @@ with ui.nav_panel("Contexto"):
                             return ui.HTML("Población en los municipios seleccionados, 2023")
 
                         case "C":
-                            return ui.HTML("Densida de pooblación en los municipios seleccionados, 2023")
+                            return ui.HTML("Densidad de población en los municipios seleccionados, 2023")
 
                         case "D":
                             return ui.HTML("Porcentaje de población de 65+ en los municipios seleccionados, 2023")
@@ -579,7 +581,7 @@ with ui.nav_panel("Mapa de dominios (Municipios)"), ui.layout_columns(col_widths
                 <ul>
                 <li>Los municipios sin casos se tratan como 0 casos, por lo que no hay diferencia entre "no se han recopilado datos aquí" y "cero casos".</li>
                 <li>La escala de color se reajusta cada vez que cambia el dominio, por lo que el mismo color indica un recuento de casos diferente para distintos dominios seleccionados.</li>
-                <li>La leyenda muestra la distribución por cuartiles (cuatro colores - 0%, 25%, 50%, 75%, 100%) del dominio seleccionado por municipio. El valor número de la leyenda corresponde al número de casos por municipio del dominio seleccionado.</li>
+                <li>La leyenda muestra la distribución por cuartiles (cuatro colores - 0%, 25%, 50%, 75%, 100%) del dominio seleccionado por municipio. El valor numérico de la leyenda corresponde al número de casos por municipio del dominio seleccionado.</li>
                 </ul>
                 </div>
                 """
