@@ -21,6 +21,7 @@ files = [
     "/plots.py",
     "/products/municipios.parquet",
     "/products/as.parquet",
+    "/products/ineAtlas_demographics_mun.parquet",
 ]
 title = "cuidamos75-app"
 
